@@ -3,107 +3,210 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>🥔 POTATO RUN 3D</title>
+<title>🥔 POTATO RUN 3D — Бурмалда Edition</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
-    width: 100%; height: 100%; overflow: hidden;
-    background: #000;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    touch-action: none; user-select: none; -webkit-user-select: none;
-    -webkit-tap-highlight-color: transparent;
+    width:100%; height:100%; overflow:hidden;
+    background:#000; font-family:'Segoe UI',system-ui,sans-serif;
+    touch-action:none; user-select:none; -webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent;
   }
-  #container { width: 100%; height: 100%; }
-  canvas { display: block; }
+  #container { width:100%; height:100%; }
+  canvas { display:block; }
+
+  #loading {
+    position:fixed; inset:0; z-index:1000;
+    display:flex; justify-content:center; align-items:center;
+    flex-direction:column; gap:24px;
+    background:radial-gradient(circle at 50% 40%, #1a1535, #05050f);
+    color:#fff; font-size:18px; text-align:center; padding:20px;
+  }
+  .spinner {
+    width:60px; height:60px;
+    border:4px solid rgba(255,255,255,0.15);
+    border-top-color:#FFD700; border-right-color:#FF8800;
+    border-radius:50%;
+    animation:spin 0.9s linear infinite;
+    box-shadow:0 0 30px rgba(255,215,0,0.3);
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
 
   #ui {
-    position: fixed; top: 20px; left: 20px;
-    color: #fff; font-weight: 800; z-index: 10; pointer-events: none;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-    line-height: 1.3;
+    position:fixed; top:20px; left:20px;
+    color:#fff; font-weight:800; z-index:10; pointer-events:none;
+    text-shadow:2px 2px 4px rgba(0,0,0,0.8);
+    line-height:1.3;
   }
-  #ui .lbl { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 2px; }
-  #ui .val { font-size: 38px; color: #FFD700; text-shadow: 0 0 15px rgba(255,215,0,0.6), 2px 2px 4px rgba(0,0,0,0.8); }
-  #ui .coins { font-size: 18px; color: #4FC3F7; margin-top: 4px; text-shadow: 0 0 10px rgba(79,195,247,0.6), 1px 1px 2px rgba(0,0,0,0.8); }
+  #ui .lbl { font-size:11px; opacity:0.7; text-transform:uppercase; letter-spacing:2px; }
+  #ui .val { font-size:40px; color:#FFD700;
+    text-shadow:0 0 18px rgba(255,215,0,0.7), 2px 2px 4px rgba(0,0,0,0.9); }
+  #ui .coins { font-size:18px; color:#4FC3F7; margin-top:4px;
+    text-shadow:0 0 10px rgba(79,195,247,0.6), 1px 1px 2px rgba(0,0,0,0.9); }
+  #ui .hearts { font-size:22px; margin-top:8px; letter-spacing:3px;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.8)); }
+
+  #burmaldaHud {
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%);
+    z-index:10; color:#fff; text-align:center; pointer-events:none;
+    font-family:inherit; transition:opacity 0.3s;
+  }
+  #burmaldaHud .bar-label {
+    font-size:11px; letter-spacing:3px; opacity:0.85;
+    text-transform:uppercase; margin-bottom:6px;
+    text-shadow:1px 1px 3px rgba(0,0,0,0.9);
+  }
+  #burmaldaHud .bar-outer {
+    width:260px; height:14px;
+    background:rgba(0,0,0,0.6);
+    border:2px solid rgba(255,255,255,0.3);
+    border-radius:10px; overflow:hidden;
+    box-shadow:0 2px 10px rgba(0,0,0,0.6);
+  }
+  #burmaldaHud .bar-inner {
+    height:100%; width:0%;
+    background:linear-gradient(90deg,#9C6ADE,#FFD700,#9C6ADE);
+    background-size:200% 100%;
+    transition:width 0.15s ease-out;
+    box-shadow:0 0 14px rgba(156,106,222,0.9);
+  }
+  #burmaldaHud.ready .bar-outer {
+    border-color:#FFD700;
+    box-shadow:0 0 25px rgba(255,215,0,0.9);
+    animation:pulseBar 0.65s ease-in-out infinite alternate;
+  }
+  @keyframes pulseBar {
+    from { transform:scale(1); }
+    to { transform:scale(1.06); }
+  }
+  #burmaldaHud .bar-hint {
+    font-size:12px; opacity:0.75; margin-top:6px;
+    text-shadow:1px 1px 3px rgba(0,0,0,0.9);
+  }
+  #burmaldaHud.ready .bar-hint {
+    color:#FFD700; opacity:1; font-weight:900;
+    animation:glowText 0.5s ease-in-out infinite alternate;
+  }
+  @keyframes glowText {
+    from { text-shadow:0 0 8px rgba(255,215,0,0.8); }
+    to { text-shadow:0 0 22px rgba(255,215,0,1); }
+  }
 
   .overlay {
-    position: fixed; inset: 0; z-index: 20;
-    display: none; flex-direction: column;
-    justify-content: center; align-items: center;
-    color: #fff; text-align: center;
-    background: radial-gradient(circle at 50% 30%, rgba(30,20,60,0.85), rgba(5,5,15,0.96));
-    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    position:fixed; inset:0; z-index:20;
+    display:none; flex-direction:column;
+    justify-content:center; align-items:center;
+    color:#fff; text-align:center; padding:20px;
+    background:radial-gradient(circle at 50% 30%, rgba(30,20,60,0.9), rgba(5,5,15,0.97));
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    overflow-y:auto;
   }
-  .overlay.show { display: flex; }
+  .overlay.show { display:flex; }
   .overlay h1 {
-    font-size: 62px; letter-spacing: 3px; margin-bottom: 8px;
-    background: linear-gradient(180deg, #FFE45C, #FF8800 60%, #B84500);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 4px 0 rgba(0,0,0,0.5)) drop-shadow(0 8px 25px rgba(255,140,0,0.5));
+    font-size:58px; letter-spacing:3px; margin-bottom:8px;
+    background:linear-gradient(180deg,#FFE45C,#FF8800 60%,#B84500);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 4px 0 rgba(0,0,0,0.5)) drop-shadow(0 8px 25px rgba(255,140,0,0.5));
   }
   .overlay h1.dead {
-    background: linear-gradient(180deg, #FF6B6B, #B00020 70%);
-    -webkit-background-clip: text; background-clip: text;
+    background:linear-gradient(180deg,#FF6B6B,#B00020 70%);
+    -webkit-background-clip:text; background-clip:text;
   }
-  .overlay .sub { font-size: 14px; opacity: 0.7; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 30px; }
-  .overlay .stats {
-    display: flex; gap: 36px; margin: 20px 0 28px;
-    padding: 20px 40px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 16px;
+  .overlay .sub { font-size:13px; opacity:0.7; letter-spacing:3px;
+    text-transform:uppercase; margin-bottom:20px; }
+
+  .controls-list {
+    display:flex; flex-direction:column; gap:8px;
+    margin:12px 0 22px; font-size:14px; width:100%; max-width:520px;
   }
-  .overlay .stat { display: flex; flex-direction: column; align-items: center; min-width: 80px; }
-  .overlay .stat-label { font-size: 11px; opacity: 0.6; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
-  .overlay .stat-value { font-size: 28px; font-weight: 900; color: #FFD700; }
-  .overlay .stat-value.blue { color: #4FC3F7; }
-  .overlay .stat-value.green { color: #81C784; }
+  .controls-list .row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:9px 16px; background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.08); border-radius:10px;
+  }
+  .controls-list .row .desc { opacity:0.85; text-align:left; }
+  .kbd {
+    display:inline-block; padding:3px 10px; border-radius:5px;
+    background:rgba(255,215,0,0.15);
+    border:1px solid rgba(255,215,0,0.5);
+    font-weight:800; font-size:12px; margin:0 2px;
+    color:#FFD700; min-width:24px; text-align:center;
+  }
+
+  .stats {
+    display:flex; gap:30px; margin:20px 0 25px;
+    padding:20px 40px;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:16px;
+  }
+  .stat { display:flex; flex-direction:column; align-items:center; min-width:80px; }
+  .stat-label { font-size:11px; opacity:0.6; letter-spacing:1.5px;
+    text-transform:uppercase; margin-bottom:6px; }
+  .stat-value { font-size:28px; font-weight:900; color:#FFD700; }
+  .stat-value.blue { color:#4FC3F7; }
+  .stat-value.green { color:#81C784; }
 
   .btn {
-    padding: 18px 56px; font-size: 22px; font-weight: 900; letter-spacing: 2px;
-    background: linear-gradient(180deg, #FFD700, #FF8800);
-    color: #3a1f00; border: none; border-radius: 14px; cursor: pointer;
-    box-shadow: 0 6px 0 #a35f00, 0 14px 30px rgba(255,140,0,0.4);
-    transition: all 0.1s; font-family: inherit;
-    text-transform: uppercase; margin: 4px;
+    padding:16px 52px; font-size:22px; font-weight:900; letter-spacing:2px;
+    background:linear-gradient(180deg,#FFD700,#FF8800);
+    color:#3a1f00; border:none; border-radius:14px; cursor:pointer;
+    box-shadow:0 6px 0 #a35f00, 0 14px 30px rgba(255,140,0,0.4);
+    transition:all 0.1s; font-family:inherit;
+    text-transform:uppercase; margin:6px;
   }
-  .btn:hover { filter: brightness(1.08); }
-  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #a35f00; }
+  .btn:hover { filter:brightness(1.08); }
+  .btn:active { transform:translateY(4px); box-shadow:0 2px 0 #a35f00; }
   .btn.secondary {
-    background: linear-gradient(180deg, #6a6a9a, #3a3a6a);
-    color: #fff; box-shadow: 0 6px 0 #1a1a3a;
+    background:linear-gradient(180deg,#6a6a9a,#3a3a6a);
+    color:#fff; box-shadow:0 6px 0 #1a1a3a;
   }
-  .btn.secondary:active { box-shadow: 0 2px 0 #1a1a3a; }
+  .btn.secondary:active { box-shadow:0 2px 0 #1a1a3a; }
 
-  .hint {
-    position: fixed; bottom: 18px; left: 0; right: 0;
-    text-align: center; color: rgba(255,255,255,0.55);
-    font-size: 13px; z-index: 10; pointer-events: none;
-    letter-spacing: 1px;
-  }
   .new-record {
-    font-size: 22px; font-weight: 900; color: #FFD700;
-    margin: 10px 0; letter-spacing: 2px;
-    animation: glow 0.8s ease-in-out infinite alternate;
+    font-size:22px; font-weight:900; color:#FFD700;
+    margin:10px 0; letter-spacing:2px;
+    animation:glowText 0.8s ease-in-out infinite alternate;
   }
-  @keyframes glow {
-    from { filter: drop-shadow(0 0 8px rgba(255,215,0,0.6)); transform: scale(1); }
-    to   { filter: drop-shadow(0 0 22px rgba(255,215,0,1)); transform: scale(1.05); }
+  .hint {
+    position:fixed; bottom:14px; left:0; right:0;
+    text-align:center; color:rgba(255,255,255,0.5);
+    font-size:12px; z-index:5; pointer-events:none;
+    letter-spacing:1px;
   }
 </style>
 </head>
 <body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div>Загрузка 3D-движка...</div>
+</div>
+
 <div id="container"></div>
 
 <div id="ui">
   <div class="lbl">Счёт</div>
   <div class="val" id="score">0</div>
   <div class="coins">🪙 <span id="coins">0</span></div>
+  <div class="hearts" id="hearts">❤️</div>
+</div>
+
+<div id="burmaldaHud">
+  <div class="bar-label">🐾 БУРМАЛДА</div>
+  <div class="bar-outer"><div class="bar-inner" id="burmaldaBar"></div></div>
+  <div class="bar-hint" id="burmaldaHint">Собирай монеты</div>
 </div>
 
 <div id="menuScreen" class="overlay show">
   <h1>POTATO RUN 3D</h1>
-  <p class="sub">Прыгай · Уворачивайся · Собирай</p>
+  <p class="sub">✦ Бурмалда Edition ✦</p>
+  <div class="controls-list">
+    <div class="row"><span class="desc">Прыжок · двойной прыжок</span><span><span class="kbd">ПРОБЕЛ</span> <span class="kbd">↑</span> <span class="kbd">W</span></span></div>
+    <div class="row"><span class="desc">Планировать (держать в воздухе)</span><span><span class="kbd">ПРОБЕЛ</span></span></div>
+    <div class="row"><span class="desc">Камнем вниз · сломать препятствие</span><span><span class="kbd">↓</span> <span class="kbd">S</span></span></div>
+    <div class="row"><span class="desc">Способность Бурмалды (когда шкала полна)</span><span><span class="kbd">E</span> <span class="kbd">Q</span></span></div>
+  </div>
   <button class="btn" id="playBtn">▶ ИГРАТЬ</button>
 </div>
 
@@ -122,41 +225,92 @@
   </div>
 </div>
 
-<div class="hint">ПРОБЕЛ / КЛИК / ТАП — прыжок &nbsp;·&nbsp; ESC — выход</div>
+<div class="hint">ПРОБЕЛ — прыжок / планирование · ↓ — вниз · E — Бурмалда · ESC — выход</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
+// ═══════════════ НАДЁЖНЫЙ ЗАГРУЗЧИК THREE.JS ═══════════════
 (function() {
+  var CDNS = [
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+    'https://unpkg.com/three@0.128.0/build/three.min.js',
+    'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js'
+  ];
+  var loading = document.getElementById('loading');
+  var i = 0;
+
+  function showError(msg) {
+    loading.innerHTML = '<div style="text-align:center;padding:40px;max-width:500px;">' +
+      '<div style="font-size:48px;margin-bottom:16px;">⚠️</div>' +
+      '<h2 style="margin-bottom:12px;color:#FF6B6B;">Ошибка</h2>' +
+      '<p style="opacity:0.7;line-height:1.5;">' + msg + '</p>' +
+      '</div>';
+  }
+
+  function tryNext() {
+    if (i >= CDNS.length) {
+      showError('Не удалось загрузить 3D-движок (Three.js). Проверь интернет и перезагрузи страницу.');
+      return;
+    }
+    var script = document.createElement('script');
+    script.src = CDNS[i++];
+    script.onload = function() {
+      if (typeof THREE === 'undefined') {
+        tryNext();
+        return;
+      }
+      // Three.js загружен — запускаем игру
+      try {
+        if (typeof initGame !== 'function') {
+          showError('Функция initGame не найдена (ошибка парсинга скрипта).');
+          return;
+        }
+        initGame();
+      } catch (e) {
+        console.error('initGame error:', e);
+        showError('Ошибка инициализации: ' + e.message);
+      }
+    };
+    script.onerror = tryNext;
+    document.head.appendChild(script);
+  }
+
+  tryNext();
+})();
+</script>
+
+<script>
+// ═══════════════ ИГРА ═══════════════
+function initGame() {
 'use strict';
 
-// ═══════════════════════ ПРОВЕРКА THREE ═══════════════════════
-if (typeof THREE === 'undefined') {
-  document.body.innerHTML = '<div style="color:white;text-align:center;padding-top:100px;font-family:sans-serif;"><h1>⚠️ Не удалось загрузить Three.js</h1><p style="margin-top:20px;opacity:0.7;">Проверь подключение к интернету и перезагрузи страницу.</p></div>';
-  return;
+// ===== RENDERER =====
+var container = document.getElementById('container');
+var renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+} catch (e) {
+  throw new Error('WebGL не поддерживается этим браузером');
 }
-
-// ═══════════════════════ SETUP ═══════════════════════
-const container = document.getElementById('container');
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87CEEB);
-scene.fog = new THREE.Fog(0x87CEEB, 30, 80);
-
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
-camera.position.set(0, 5, 15);
-camera.lookAt(0, 1.5, 0);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);
 
-// ═══════════════════════ СВЕТ ═══════════════════════
+// ===== SCENE =====
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87CEEB);
+scene.fog = new THREE.Fog(0x87CEEB, 30, 80);
+
+var camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(0, 5, 15);
+camera.lookAt(0, 1.5, 0);
+
+// ===== LIGHTS =====
 scene.add(new THREE.AmbientLight(0xffffff, 0.55));
 scene.add(new THREE.HemisphereLight(0xffffff, 0x445544, 0.4));
 
-const sunLight = new THREE.DirectionalLight(0xfff5e0, 0.95);
+var sunLight = new THREE.DirectionalLight(0xfff5e0, 0.95);
 sunLight.position.set(12, 25, 15);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.set(2048, 2048);
@@ -169,36 +323,35 @@ sunLight.shadow.camera.far = 80;
 sunLight.shadow.bias = -0.0005;
 scene.add(sunLight);
 
-// ═══════════════════════ НЕБО / ФОН ═══════════════════════
-const sunMesh = new THREE.Mesh(
+// ===== SKY =====
+var sunMesh = new THREE.Mesh(
   new THREE.SphereGeometry(2, 24, 24),
   new THREE.MeshBasicMaterial({ color: 0xFFEB3B })
 );
 sunMesh.position.set(22, 32, -45);
 scene.add(sunMesh);
 
-const sunGlow = new THREE.Mesh(
+var sunGlow = new THREE.Mesh(
   new THREE.SphereGeometry(3.6, 20, 20),
   new THREE.MeshBasicMaterial({ color: 0xFFFF88, transparent: true, opacity: 0.22 })
 );
 sunGlow.position.copy(sunMesh.position);
 scene.add(sunGlow);
 
-const clouds = [];
+var clouds = [];
 function makeCloud(x, y, z, s) {
-  const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 });
-  const a = new THREE.Mesh(new THREE.SphereGeometry(1.5, 10, 10), mat);
-  const b = new THREE.Mesh(new THREE.SphereGeometry(2.0, 10, 10), mat);
-  const c = new THREE.Mesh(new THREE.SphereGeometry(1.6, 10, 10), mat);
+  var g = new THREE.Group();
+  var mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 });
+  var a = new THREE.Mesh(new THREE.SphereGeometry(1.5, 10, 10), mat);
+  var b = new THREE.Mesh(new THREE.SphereGeometry(2.0, 10, 10), mat);
+  var c = new THREE.Mesh(new THREE.SphereGeometry(1.6, 10, 10), mat);
   b.position.set(1.5, 0.3, 0);
   c.position.set(-1.5, 0.2, 0);
-  g.add(a, b, c);
+  g.add(a); g.add(b); g.add(c);
   g.position.set(x, y, z);
   g.scale.setScalar(s);
   scene.add(g);
   clouds.push(g);
-  return g;
 }
 makeCloud(-15, 12, -25, 1.2);
 makeCloud(8, 14, -30, 1.5);
@@ -207,14 +360,13 @@ makeCloud(-25, 15, -40, 1.3);
 makeCloud(5, 9, -20, 0.9);
 
 function makeMountain(x, z, w, h, color) {
-  const m = new THREE.Mesh(
+  var m = new THREE.Mesh(
     new THREE.ConeGeometry(w, h, 4),
     new THREE.MeshStandardMaterial({ color: color, roughness: 1, flatShading: true })
   );
   m.position.set(x, h / 2 - 1, z);
   m.rotation.y = Math.PI / 4;
   scene.add(m);
-  return m;
 }
 makeMountain(-35, -55, 15, 22, 0x5B7DB1);
 makeMountain(-12, -60, 18, 26, 0x4A6A99);
@@ -223,32 +375,31 @@ makeMountain(38, -60, 16, 24, 0x4A6A99);
 makeMountain(-60, -62, 20, 28, 0x3D5A80);
 makeMountain(65, -63, 18, 24, 0x3D5A80);
 
-// ═══════════════════════ ЗЕМЛЯ ═══════════════════════
+// ===== GROUND =====
 function makeGroundTexture() {
-  const c = document.createElement('canvas');
+  var c = document.createElement('canvas');
   c.width = 512; c.height = 512;
-  const g = c.getContext('2d');
-  g.fillStyle = '#7BA428';
-  g.fillRect(0, 0, 512, 512);
+  var g = c.getContext('2d');
+  g.fillStyle = '#7BA428'; g.fillRect(0, 0, 512, 512);
   g.fillStyle = '#6B8E23';
-  for (let i = 0; i < 512; i += 24) g.fillRect(i, 0, 12, 512);
+  for (var i = 0; i < 512; i += 24) g.fillRect(i, 0, 12, 512);
   g.fillStyle = 'rgba(170,210,90,0.3)';
-  for (let i = 12; i < 512; i += 48) g.fillRect(i, 0, 6, 512);
+  for (var j = 12; j < 512; j += 48) g.fillRect(j, 0, 6, 512);
   g.fillStyle = 'rgba(139,69,19,0.12)';
-  for (let i = 0; i < 20; i++) {
+  for (var k = 0; k < 20; k++) {
     g.beginPath();
     g.arc(Math.random() * 512, Math.random() * 512, 5 + Math.random() * 10, 0, Math.PI * 2);
     g.fill();
   }
-  const tex = new THREE.CanvasTexture(c);
+  var tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(30, 1);
-  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  try { tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); } catch (e) {}
   return tex;
 }
 
-const groundTexture = makeGroundTexture();
-const ground = new THREE.Mesh(
+var groundTexture = makeGroundTexture();
+var ground = new THREE.Mesh(
   new THREE.PlaneGeometry(300, 40),
   new THREE.MeshStandardMaterial({ map: groundTexture, roughness: 1 })
 );
@@ -256,7 +407,7 @@ ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-const dirt = new THREE.Mesh(
+var dirt = new THREE.Mesh(
   new THREE.BoxGeometry(300, 0.5, 40),
   new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 1 })
 );
@@ -264,24 +415,21 @@ dirt.position.y = -0.26;
 dirt.receiveShadow = true;
 scene.add(dirt);
 
-// ═══════════════════════ КАРТОШКА ═══════════════════════
+// ===== POTATO =====
 function createPotato() {
-  const group = new THREE.Group();
-
-  // Тело с неровностями
-  const bodyGeo = new THREE.SphereGeometry(1, 40, 40);
-  const pos = bodyGeo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-    const lump =
-      Math.sin(x * 3.1) * Math.cos(y * 2.7) * Math.sin(z * 3.4) * 0.09 +
-      Math.sin(x * 6 + 1) * Math.cos(y * 5) * 0.03;
-    const s = 1 + lump;
-    pos.setXYZ(i, x * s, y * s, z * s);
+  var group = new THREE.Group();
+  var bodyGeo = new THREE.SphereGeometry(1, 40, 40);
+  var pos = bodyGeo.attributes.position;
+  for (var i = 0; i < pos.count; i++) {
+    var x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    var lump = Math.sin(x*3.1) * Math.cos(y*2.7) * Math.sin(z*3.4) * 0.09 +
+               Math.sin(x*6+1) * Math.cos(y*5) * 0.03;
+    var s = 1 + lump;
+    pos.setXYZ(i, x*s, y*s, z*s);
   }
   bodyGeo.computeVertexNormals();
 
-  const body = new THREE.Mesh(
+  var body = new THREE.Mesh(
     bodyGeo,
     new THREE.MeshStandardMaterial({ color: 0xC4A76A, roughness: 0.85, metalness: 0.05 })
   );
@@ -290,38 +438,34 @@ function createPotato() {
   body.receiveShadow = true;
   group.add(body);
 
-  // Белки глаз
-  const eyeWGeo = new THREE.SphereGeometry(0.18, 16, 16);
-  const eyeWMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-  const eyeWL = new THREE.Mesh(eyeWGeo, eyeWMat);
+  var eyeWGeo = new THREE.SphereGeometry(0.18, 16, 16);
+  var eyeWMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+  var eyeWL = new THREE.Mesh(eyeWGeo, eyeWMat);
   eyeWL.position.set(-0.3, 0.15, 0.88);
   group.add(eyeWL);
-  const eyeWR = new THREE.Mesh(eyeWGeo, eyeWMat);
+  var eyeWR = new THREE.Mesh(eyeWGeo, eyeWMat);
   eyeWR.position.set(0.3, 0.15, 0.88);
   group.add(eyeWR);
 
-  // Зрачки
-  const pupilGeo = new THREE.SphereGeometry(0.1, 12, 12);
-  const pupilMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.2 });
-  const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
+  var pupilGeo = new THREE.SphereGeometry(0.1, 12, 12);
+  var pupilMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.2 });
+  var pupilL = new THREE.Mesh(pupilGeo, pupilMat);
   pupilL.position.set(-0.32, 0.15, 1.0);
   group.add(pupilL);
-  const pupilR = new THREE.Mesh(pupilGeo, pupilMat);
+  var pupilR = new THREE.Mesh(pupilGeo, pupilMat);
   pupilR.position.set(0.28, 0.15, 1.0);
   group.add(pupilR);
 
-  // Блики
-  const shineGeo = new THREE.SphereGeometry(0.04, 8, 8);
-  const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const shineL = new THREE.Mesh(shineGeo, shineMat);
+  var shineGeo = new THREE.SphereGeometry(0.04, 8, 8);
+  var shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  var shineL = new THREE.Mesh(shineGeo, shineMat);
   shineL.position.set(-0.29, 0.19, 1.08);
   group.add(shineL);
-  const shineR = new THREE.Mesh(shineGeo, shineMat);
+  var shineR = new THREE.Mesh(shineGeo, shineMat);
   shineR.position.set(0.31, 0.19, 1.08);
   group.add(shineR);
 
-  // Улыбка
-  const mouth = new THREE.Mesh(
+  var mouth = new THREE.Mesh(
     new THREE.TorusGeometry(0.16, 0.03, 8, 16, Math.PI),
     new THREE.MeshStandardMaterial({ color: 0x4a2a0a, roughness: 0.8 })
   );
@@ -330,20 +474,18 @@ function createPotato() {
   mouth.position.set(0, -0.12, 0.94);
   group.add(mouth);
 
-  // Румянец
-  const cheekGeo = new THREE.SphereGeometry(0.11, 12, 12);
-  const cheekMat = new THREE.MeshStandardMaterial({ color: 0xFF8888, roughness: 0.9, transparent: true, opacity: 0.7 });
-  const cheekL = new THREE.Mesh(cheekGeo, cheekMat);
+  var cheekGeo = new THREE.SphereGeometry(0.11, 12, 12);
+  var cheekMat = new THREE.MeshStandardMaterial({ color: 0xFF8888, roughness: 0.9, transparent: true, opacity: 0.7 });
+  var cheekL = new THREE.Mesh(cheekGeo, cheekMat);
   cheekL.scale.set(1.3, 0.7, 0.4);
   cheekL.position.set(-0.5, -0.1, 0.82);
   group.add(cheekL);
-  const cheekR = new THREE.Mesh(cheekGeo, cheekMat);
+  var cheekR = new THREE.Mesh(cheekGeo, cheekMat);
   cheekR.scale.set(1.3, 0.7, 0.4);
   cheekR.position.set(0.5, -0.1, 0.82);
   group.add(cheekR);
 
-  // Хвостик
-  const stem = new THREE.Mesh(
+  var stem = new THREE.Mesh(
     new THREE.CylinderGeometry(0.04, 0.06, 0.15, 8),
     new THREE.MeshStandardMaterial({ color: 0x6B8E23, roughness: 0.9 })
   );
@@ -354,12 +496,11 @@ function createPotato() {
   return group;
 }
 
-const potato = createPotato();
+var potato = createPotato();
 potato.position.set(0, 1.15, 0);
 scene.add(potato);
 
-// Тень-пятно под картошкой
-const potatoShadow = new THREE.Mesh(
+var potatoShadow = new THREE.Mesh(
   new THREE.CircleGeometry(0.85, 32),
   new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false })
 );
@@ -367,50 +508,154 @@ potatoShadow.rotation.x = -Math.PI / 2;
 potatoShadow.position.set(0, 0.02, 0);
 scene.add(potatoShadow);
 
-// ═══════════════════════ ФАБРИКИ ═══════════════════════
+// ===== BURMALDA =====
+function createBurmalda() {
+  var g = new THREE.Group();
+
+  var bodyGeo = new THREE.SphereGeometry(0.55, 24, 24);
+  var bp = bodyGeo.attributes.position;
+  for (var i = 0; i < bp.count; i++) {
+    var x = bp.getX(i), y = bp.getY(i), z = bp.getZ(i);
+    var fluff = Math.sin(x*8) * Math.cos(y*8) * Math.sin(z*8) * 0.06;
+    bp.setXYZ(i, x*(1+fluff), y*(1+fluff), z*(1+fluff));
+  }
+  bodyGeo.computeVertexNormals();
+  var body = new THREE.Mesh(
+    bodyGeo,
+    new THREE.MeshStandardMaterial({ color: 0x9C6ADE, roughness: 0.75 })
+  );
+  body.castShadow = true;
+  g.add(body);
+
+  var belly = new THREE.Mesh(
+    new THREE.SphereGeometry(0.32, 20, 20),
+    new THREE.MeshStandardMaterial({ color: 0xD4BBFF, roughness: 0.9 })
+  );
+  belly.position.set(0, -0.1, 0.35);
+  belly.scale.set(1, 0.85, 0.6);
+  g.add(belly);
+
+  var ewGeo = new THREE.SphereGeometry(0.15, 16, 16);
+  var ewMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+  var ewL = new THREE.Mesh(ewGeo, ewMat);
+  ewL.position.set(-0.19, 0.15, 0.5);
+  g.add(ewL);
+  var ewR = new THREE.Mesh(ewGeo, ewMat);
+  ewR.position.set(0.19, 0.15, 0.5);
+  g.add(ewR);
+
+  var pupGeo = new THREE.SphereGeometry(0.09, 12, 12);
+  var pupMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.2 });
+  var pupL = new THREE.Mesh(pupGeo, pupMat);
+  pupL.position.set(-0.2, 0.15, 0.62);
+  g.add(pupL);
+  var pupR = new THREE.Mesh(pupGeo, pupMat);
+  pupR.position.set(0.18, 0.15, 0.62);
+  g.add(pupR);
+
+  var shineGeo2 = new THREE.SphereGeometry(0.035, 8, 8);
+  var shineMat2 = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  var shL = new THREE.Mesh(shineGeo2, shineMat2);
+  shL.position.set(-0.18, 0.18, 0.68);
+  g.add(shL);
+  var shR = new THREE.Mesh(shineGeo2, shineMat2);
+  shR.position.set(0.2, 0.18, 0.68);
+  g.add(shR);
+
+  var mouth = new THREE.Mesh(
+    new THREE.TorusGeometry(0.1, 0.025, 6, 12, Math.PI),
+    new THREE.MeshStandardMaterial({ color: 0x4a2a0a })
+  );
+  mouth.rotation.z = Math.PI;
+  mouth.rotation.x = -0.2;
+  mouth.position.set(0, -0.05, 0.62);
+  g.add(mouth);
+
+  var earMat = new THREE.MeshStandardMaterial({ color: 0x9C6ADE, roughness: 0.75 });
+  var earGeo = new THREE.ConeGeometry(0.15, 0.3, 6);
+  var earL = new THREE.Mesh(earGeo, earMat);
+  earL.position.set(-0.3, 0.55, 0);
+  earL.rotation.z = 0.3;
+  earL.castShadow = true;
+  g.add(earL);
+  var earR = new THREE.Mesh(earGeo, earMat);
+  earR.position.set(0.3, 0.55, 0);
+  earR.rotation.z = -0.3;
+  earR.castShadow = true;
+  g.add(earR);
+
+  var wingMat = new THREE.MeshStandardMaterial({
+    color: 0xFFB6E1, transparent: true, opacity: 0.85, roughness: 0.5, side: THREE.DoubleSide
+  });
+  var wingGeo = new THREE.SphereGeometry(0.28, 12, 12);
+  var wingL = new THREE.Mesh(wingGeo, wingMat);
+  wingL.position.set(-0.55, 0.1, -0.15);
+  wingL.scale.set(1, 0.6, 0.3);
+  wingL.rotation.y = 0.4;
+  g.add(wingL);
+  var wingR = new THREE.Mesh(wingGeo, wingMat);
+  wingR.position.set(0.55, 0.1, -0.15);
+  wingR.scale.set(1, 0.6, 0.3);
+  wingR.rotation.y = -0.4;
+  g.add(wingR);
+
+  g.userData.wingL = wingL;
+  g.userData.wingR = wingR;
+  return g;
+}
+
+var burmalda = createBurmalda();
+burmalda.position.set(3, 3, 0);
+burmalda.visible = false;
+scene.add(burmalda);
+
+// ===== OBSTACLES / COINS =====
 function createObstacle() {
-  const types = ['cactus', 'rock', 'spike'];
-  const type = types[Math.floor(Math.random() * types.length)];
-  const g = new THREE.Group();
+  var types = ['cactus', 'rock', 'spike'];
+  var type = types[Math.floor(Math.random() * types.length)];
+  var g = new THREE.Group();
 
   if (type === 'cactus') {
-    const mat = new THREE.MeshStandardMaterial({ color: 0x2E7D32, roughness: 0.7 });
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 1.5, 12), mat);
+    var mat = new THREE.MeshStandardMaterial({ color: 0x2E7D32, roughness: 0.7 });
+    var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 1.5, 12), mat);
     trunk.position.y = 0.75; trunk.castShadow = true;
     g.add(trunk);
-    const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 0.6, 10), mat);
+    var arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 0.6, 10), mat);
     arm1.position.set(0.35, 1.0, 0);
     arm1.rotation.z = -Math.PI / 3;
     arm1.castShadow = true;
     g.add(arm1);
-    const arm2 = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 0.5, 10), mat);
+    var arm2 = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 0.5, 10), mat);
     arm2.position.set(-0.3, 0.85, 0);
     arm2.rotation.z = Math.PI / 3;
     arm2.castShadow = true;
     g.add(arm2);
-    const flower = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), new THREE.MeshStandardMaterial({ color: 0xFF4081 }));
+    var flower = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8),
+      new THREE.MeshStandardMaterial({ color: 0xFF4081 }));
     flower.position.y = 1.55;
     g.add(flower);
   } else if (type === 'rock') {
-    const geo = new THREE.DodecahedronGeometry(0.75, 0);
-    const p = geo.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const s = 0.8 + Math.random() * 0.4;
-      p.setXYZ(i, p.getX(i) * s, p.getY(i) * s, p.getZ(i) * s);
+    var geo = new THREE.DodecahedronGeometry(0.75, 0);
+    var p = geo.attributes.position;
+    for (var i = 0; i < p.count; i++) {
+      var s = 0.8 + Math.random() * 0.4;
+      p.setXYZ(i, p.getX(i)*s, p.getY(i)*s, p.getZ(i)*s);
     }
     geo.computeVertexNormals();
-    const rock = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x6B6B6B, roughness: 1, flatShading: true }));
+    var rock = new THREE.Mesh(geo,
+      new THREE.MeshStandardMaterial({ color: 0x6B6B6B, roughness: 1, flatShading: true }));
     rock.position.y = 0.75; rock.castShadow = true;
     g.add(rock);
   } else {
-    const spikeMat = new THREE.MeshStandardMaterial({ color: 0xBDBDBD, metalness: 0.7, roughness: 0.3 });
-    for (let i = 0; i < 3; i++) {
-      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.2, 1.4, 8), spikeMat);
-      spike.position.set(-0.5 + i * 0.5, 0.7, 0);
+    var spikeMat = new THREE.MeshStandardMaterial({ color: 0xBDBDBD, metalness: 0.7, roughness: 0.3 });
+    for (var j = 0; j < 3; j++) {
+      var spike = new THREE.Mesh(new THREE.ConeGeometry(0.2, 1.4, 8), spikeMat);
+      spike.position.set(-0.5 + j*0.5, 0.7, 0);
       spike.castShadow = true;
       g.add(spike);
     }
-    const base = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.2, 0.4), new THREE.MeshStandardMaterial({ color: 0x424242 }));
+    var base = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.2, 0.4),
+      new THREE.MeshStandardMaterial({ color: 0x424242 }));
     base.position.y = 0.1; base.castShadow = true;
     g.add(base);
   }
@@ -418,8 +663,8 @@ function createObstacle() {
 }
 
 function createCoin() {
-  const g = new THREE.Group();
-  const coin = new THREE.Mesh(
+  var g = new THREE.Group();
+  var coin = new THREE.Mesh(
     new THREE.CylinderGeometry(0.4, 0.4, 0.1, 24),
     new THREE.MeshStandardMaterial({
       color: 0xFFD700, metalness: 1, roughness: 0.25,
@@ -429,7 +674,7 @@ function createCoin() {
   coin.rotation.x = Math.PI / 2;
   coin.castShadow = true;
   g.add(coin);
-  const star = new THREE.Mesh(
+  var star = new THREE.Mesh(
     new THREE.CylinderGeometry(0.15, 0.15, 0.12, 5),
     new THREE.MeshStandardMaterial({ color: 0xFFEB3B, metalness: 1, roughness: 0.2 })
   );
@@ -439,24 +684,27 @@ function createCoin() {
   return g;
 }
 
-// ═══════════════════════ ЧАСТИЦЫ ═══════════════════════
-const particlePool = [];
-const MAX_PARTICLES = 80;
-for (let i = 0; i < MAX_PARTICLES; i++) {
-  const mesh = new THREE.Mesh(
+// ===== PARTICLES =====
+var particlePool = [];
+var MAX_PARTICLES = 100;
+for (var i = 0; i < MAX_PARTICLES; i++) {
+  var mesh = new THREE.Mesh(
     new THREE.SphereGeometry(0.09, 6, 6),
     new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 })
   );
   mesh.visible = false;
   scene.add(mesh);
-  particlePool.push({ mesh, life: 0, maxLife: 1, vx: 0, vy: 0, vz: 0 });
+  particlePool.push({ mesh: mesh, life: 0, maxLife: 1, vx: 0, vy: 0, vz: 0 });
 }
 
 function spawnParticles(x, y, z, color, count, power) {
   count = count || 8; power = power || 4;
-  for (let i = 0; i < count; i++) {
-    const p = particlePool.find(pp => pp.life <= 0);
-    if (!p) return;
+  var spawned = 0;
+  for (var i = 0; i < particlePool.length; i++) {
+    var p = particlePool[i];
+    if (p.life > 0) continue;
+    if (spawned >= count) break;
+    spawned++;
     p.mesh.position.set(x, y, z);
     p.mesh.material.color.setHex(color);
     p.mesh.material.opacity = 1;
@@ -470,7 +718,8 @@ function spawnParticles(x, y, z, color, count, power) {
 }
 
 function updateParticles(dt) {
-  for (const p of particlePool) {
+  for (var i = 0; i < particlePool.length; i++) {
+    var p = particlePool[i];
     if (p.life > 0) {
       p.life -= dt / p.maxLife;
       p.mesh.position.x += p.vx * dt;
@@ -483,11 +732,11 @@ function updateParticles(dt) {
   }
 }
 
-// ═══════════════════════ ЗВУК ═══════════════════════
-let audioCtx = null;
+// ===== AUDIO =====
+var audioCtx = null;
 function ensureAudio() {
   if (!audioCtx) {
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
   }
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 }
@@ -495,8 +744,8 @@ function beep(freq, dur, type, vol, slideTo) {
   ensureAudio();
   if (!audioCtx) return;
   try {
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
     o.type = type || 'square';
     o.frequency.setValueAtTime(freq, audioCtx.currentTime);
     if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, audioCtx.currentTime + dur);
@@ -504,47 +753,160 @@ function beep(freq, dur, type, vol, slideTo) {
     g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
     o.connect(g); g.connect(audioCtx.destination);
     o.start(); o.stop(audioCtx.currentTime + dur + 0.02);
-  } catch(e) {}
+  } catch (e) {}
 }
 
-// ═══════════════════════ СОСТОЯНИЕ ═══════════════════════
-const G = {
+// ===== GAME STATE =====
+var G = {
   state: 'menu',
-  score: 0,
-  coins: 0,
-  best: parseInt(localStorage.getItem('potato3dBest') || '0'),
-  frame: 0,
-  idleTime: 0,
-  timeScale: 1,
-  spawnTimer: 0,
-  spawnInterval: 1.4,
-  speed: 8,
-  potatoY: 1.15,
-  potatoVY: 0,
-  isJumping: false,
-  jumpsLeft: 1,
-  squashX: 1,
-  squashY: 1,
-  rotZ: 0,
-  dyingTimer: 0,
-  obstacles: [],
-  coins3d: []
+  score: 0, coins: 0,
+  lives: 1, maxLives: 3,
+  best: parseInt(localStorage.getItem('potato3dBest') || '0') || 0,
+  frame: 0, idleTime: 0, timeScale: 1,
+  spawnTimer: 0, spawnInterval: 1.4, speed: 8,
+  // Potato physics
+  potatoY: 1.15, potatoVY: 0,
+  isJumping: false, jumpsLeft: 2, maxJumps: 2,
+  jumpHeld: false, isGliding: false,
+  isDiving: false, diveTimer: 0,
+  squashX: 1, squashY: 1, rotZ: 0,
+  invincibleTimer: 0, dyingTimer: 0,
+  cameraShake: 0,
+  // Burmalda
+  burmaldaMeter: 0, burmaldaMaxMeter: 100,
+  burmaldaCoinTimer: 0, burmaldaCoinInterval: 3,
+  burmaldaActive: false, burmaldaEffectTimer: 0, burmaldaEffect: null,
+  burmaldaFlip: 0,
+  scoreMultiplier: 1, scoreMultiplierTimer: 0,
+  // Lists
+  obstacles: [], coins3d: []
 };
 
 document.getElementById('finalBest').textContent = G.best;
 
-// ═══════════════════════ СПАВН / ПРЫЖОК ═══════════════════════
+// ===== HUD =====
+function updateHud() {
+  document.getElementById('score').textContent = Math.floor(G.score);
+  document.getElementById('coins').textContent = G.coins;
+
+  var hearts = '';
+  for (var i = 0; i < G.maxLives; i++) {
+    hearts += i < G.lives ? '❤️' : '🖤';
+  }
+  document.getElementById('hearts').textContent = hearts;
+
+  var ratio = G.burmaldaMeter / G.burmaldaMaxMeter;
+  document.getElementById('burmaldaBar').style.width = (ratio * 100) + '%';
+
+  var hud = document.getElementById('burmaldaHud');
+  var hint = document.getElementById('burmaldaHint');
+
+  if (G.burmaldaActive && G.burmaldaEffect) {
+    if (G.burmaldaEffect === 'double') {
+      hint.textContent = '×2 очки: ' + Math.ceil(G.burmaldaEffectTimer) + 'с';
+    } else if (G.burmaldaEffect === 'life') {
+      hint.textContent = 'Получена жизнь!';
+    } else {
+      hint.textContent = 'Монеты!';
+    }
+    hud.classList.add('ready');
+  } else if (G.burmaldaMeter >= G.burmaldaMaxMeter) {
+    hint.textContent = 'ГОТОВО! Нажми E';
+    hud.classList.add('ready');
+  } else {
+    hint.textContent = 'Собирай монеты';
+    hud.classList.remove('ready');
+  }
+}
+
+// ===== MECHANICS =====
+function jump() {
+  if (G.state !== 'playing') return;
+  if (G.jumpsLeft <= 0) return;
+
+  var isFirst = G.jumpsLeft === G.maxJumps;
+  G.potatoVY = isFirst ? 13 : 11;
+  G.isJumping = true;
+  G.jumpsLeft--;
+  G.squashX = 0.8;
+  G.squashY = 1.2;
+  G.isDiving = false;
+
+  spawnParticles(potato.position.x, 0.1, 0,
+    isFirst ? 0xD2B48C : 0xFFB74D, isFirst ? 10 : 8, 5);
+  beep(isFirst ? 600 : 800, 0.1, 'square', 0.05, isFirst ? 500 : 1200);
+}
+
+function dive() {
+  if (G.state !== 'playing') return;
+  if (G.potatoY <= 1.15) return;
+  if (G.isDiving) return;
+  G.isDiving = true;
+  G.diveTimer = 0;
+  G.potatoVY = -25;
+  beep(300, 0.15, 'sawtooth', 0.05, 100);
+  spawnParticles(potato.position.x, potato.position.y, 0, 0xFF6B6B, 6, 4);
+}
+
+function activateBurmalda() {
+  if (G.state !== 'playing') return;
+  if (G.burmaldaMeter < G.burmaldaMaxMeter) return;
+  if (G.burmaldaActive) return;
+
+  G.burmaldaMeter = 0;
+  G.burmaldaActive = true;
+
+  var roll = Math.random();
+  if (roll < 0.4) {
+    G.burmaldaEffect = 'double';
+    G.burmaldaEffectTimer = 12;
+    G.scoreMultiplier = 2;
+    G.scoreMultiplierTimer = 12;
+    beep(1200, 0.3, 'sine', 0.08, 2400);
+    spawnParticles(potato.position.x, potato.position.y, 0, 0xFFD700, 20, 8);
+  } else if (roll < 0.7 && G.lives < G.maxLives) {
+    G.burmaldaEffect = 'life';
+    G.burmaldaEffectTimer = 2;
+    G.lives++;
+    beep(1600, 0.4, 'sine', 0.08, 800);
+    spawnParticles(potato.position.x, potato.position.y, 0, 0xFF6B9D, 25, 10);
+  } else {
+    G.burmaldaEffect = 'coins';
+    G.burmaldaEffectTimer = 1;
+    for (var i = 0; i < 15; i++) {
+      (function(idx) {
+        setTimeout(function() {
+          if (G.state !== 'playing') return;
+          var c = createCoin();
+          c.position.set(
+            potato.position.x + (Math.random() - 0.5) * 6,
+            3 + Math.random() * 4,
+            (Math.random() - 0.5) * 2
+          );
+          c.userData.baseY = c.position.y;
+          c.userData.phase = Math.random() * Math.PI * 2;
+          scene.add(c);
+          G.coins3d.push(c);
+        }, idx * 60);
+      })(i);
+    }
+    beep(1000, 0.3, 'triangle', 0.07, 1600);
+    spawnParticles(potato.position.x, potato.position.y, 0, 0xFFD700, 20, 8);
+  }
+  updateHud();
+}
+
 function spawnObstacle() {
-  const o = createObstacle();
+  var o = createObstacle();
   o.position.set(18, 0, 0);
   scene.add(o);
   G.obstacles.push(o);
 }
 
 function spawnCoin3d() {
-  const c = createCoin();
-  const heights = [1.5, 2.8, 4.0];
-  const y = heights[Math.floor(Math.random() * heights.length)];
+  var c = createCoin();
+  var heights = [1.5, 2.8, 4.0];
+  var y = heights[Math.floor(Math.random() * heights.length)];
   c.position.set(18, y, 0);
   c.userData.baseY = y;
   c.userData.phase = Math.random() * Math.PI * 2;
@@ -552,58 +914,41 @@ function spawnCoin3d() {
   G.coins3d.push(c);
 }
 
-function jump() {
-  if (G.state !== 'playing') return;
-  if (G.jumpsLeft <= 0) return;
-  G.potatoVY = 13;
-  G.isJumping = true;
-  G.jumpsLeft--;
-  G.squashX = 0.8;
-  G.squashY = 1.2;
-  spawnParticles(potato.position.x, 0.1, 0, 0xD2B48C, 10, 5);
-  beep(G.jumpsLeft === 0 ? 700 : 550, 0.1, 'square', 0.05, G.jumpsLeft === 0 ? 500 : 400);
-}
+function damagePlayer() {
+  if (G.invincibleTimer > 0) return;
 
-// ═══════════════════════ ПЕРЕХОДЫ ═══════════════════════
-function startGame() {
-  for (const o of G.obstacles) scene.remove(o);
-  for (const c of G.coins3d) scene.remove(c);
-  G.obstacles = []; G.coins3d = [];
-  G.score = 0; G.coins = 0; G.frame = 0;
-  G.speed = 8; G.spawnTimer = 0; G.spawnInterval = 1.4;
-  G.potatoY = 1.15; G.potatoVY = 0; G.isJumping = false;
-  G.jumpsLeft = 1; G.squashX = 1; G.squashY = 1;
-  G.rotZ = 0; G.timeScale = 1; G.dyingTimer = 0;
-  potato.position.set(0, 1.15, 0);
-  potato.rotation.set(0, 0, 0);
-  potato.scale.set(1, 1, 1);
-  potato.visible = true;
-  document.getElementById('score').textContent = '0';
-  document.getElementById('coins').textContent = '0';
-  document.getElementById('menuScreen').classList.remove('show');
-  document.getElementById('gameOverScreen').classList.remove('show');
-  G.state = 'playing';
-  ensureAudio();
-  beep(880, 0.15, 'sine', 0.08, 1760);
+  G.lives--;
+  G.invincibleTimer = 90;
+  G.squashX = 1.4;
+  G.squashY = 0.6;
+  G.cameraShake = 1;
+
+  beep(300, 0.3, 'sawtooth', 0.08, 100);
+  spawnParticles(potato.position.x, potato.position.y, 0, 0xFF6B6B, 20, 8);
+  spawnParticles(potato.position.x, potato.position.y, 0, 0xFFFFFF, 10, 5);
+
+  if (G.lives <= 0) gameOver();
+  updateHud();
 }
 
 function gameOver() {
   G.state = 'dying';
   G.dyingTimer = 0;
-  G.timeScale = 0.25;
-  spawnParticles(potato.position.x, potato.position.y, 0, 0xC4A76A, 20, 8);
+  G.timeScale = 0.3;
+  spawnParticles(potato.position.x, potato.position.y, 0, 0xC4A76A, 25, 9);
   spawnParticles(potato.position.x, potato.position.y, 0, 0xFF6B6B, 15, 6);
   beep(150, 0.5, 'sawtooth', 0.1, 60);
   beep(80, 0.6, 'square', 0.06, 40);
   potato.visible = false;
+  burmalda.visible = false;
 }
 
 function finishGameOver() {
   G.state = 'gameover';
-  const isRecord = G.score > G.best;
+  var isRecord = G.score > G.best;
   if (isRecord) {
     G.best = Math.floor(G.score);
-    try { localStorage.setItem('potato3dBest', String(G.best)); } catch(e){}
+    try { localStorage.setItem('potato3dBest', String(G.best)); } catch (e) {}
   }
   document.getElementById('finalScore').textContent = Math.floor(G.score);
   document.getElementById('finalCoins').textContent = G.coins;
@@ -614,26 +959,69 @@ function finishGameOver() {
   G.timeScale = 1;
 }
 
+function resetGameState() {
+  for (var i = 0; i < G.obstacles.length; i++) scene.remove(G.obstacles[i]);
+  for (var j = 0; j < G.coins3d.length; j++) scene.remove(G.coins3d[j]);
+  G.obstacles = [];
+  G.coins3d = [];
+
+  G.score = 0; G.coins = 0; G.lives = 1;
+  G.frame = 0; G.speed = 8;
+  G.spawnTimer = 0; G.spawnInterval = 1.4;
+  G.potatoY = 1.15; G.potatoVY = 0;
+  G.isJumping = false; G.jumpsLeft = 2;
+  G.jumpHeld = false; G.isGliding = false;
+  G.isDiving = false; G.diveTimer = 0;
+  G.squashX = 1; G.squashY = 1; G.rotZ = 0;
+  G.invincibleTimer = 0; G.dyingTimer = 0;
+  G.timeScale = 1; G.cameraShake = 0;
+  G.burmaldaMeter = 0; G.burmaldaCoinTimer = 0;
+  G.burmaldaActive = false; G.burmaldaEffectTimer = 0;
+  G.burmaldaEffect = null;
+  G.scoreMultiplier = 1; G.scoreMultiplierTimer = 0;
+
+  potato.position.set(0, 1.15, 0);
+  potato.rotation.set(0, 0, 0);
+  potato.scale.set(1, 1, 1);
+  potato.visible = true;
+  burmalda.visible = false;
+  updateHud();
+}
+
+function startGame() {
+  resetGameState();
+  document.getElementById('menuScreen').classList.remove('show');
+  document.getElementById('gameOverScreen').classList.remove('show');
+  G.state = 'playing';
+  burmalda.visible = true;
+  burmalda.position.set(3, 3, 0);
+  ensureAudio();
+  beep(880, 0.15, 'sine', 0.08, 1760);
+  beep(1320, 0.2, 'sine', 0.06, 2000);
+}
+
 function goToMenu() {
   G.state = 'menu';
   document.getElementById('gameOverScreen').classList.remove('show');
   document.getElementById('menuScreen').classList.add('show');
-  for (const o of G.obstacles) scene.remove(o);
-  for (const c of G.coins3d) scene.remove(c);
-  G.obstacles = []; G.coins3d = [];
+  for (var i = 0; i < G.obstacles.length; i++) scene.remove(G.obstacles[i]);
+  for (var j = 0; j < G.coins3d.length; j++) scene.remove(G.coins3d[j]);
+  G.obstacles = [];
+  G.coins3d = [];
   potato.visible = true;
   potato.position.set(0, 1.15, 0);
   potato.rotation.set(0, 0, 0);
   potato.scale.set(1, 1, 1);
+  burmalda.visible = false;
   G.timeScale = 1;
 }
 
-// ═══════════════════════ UPDATE ═══════════════════════
+// ===== UPDATE =====
 function update(dt) {
-  const scaledDt = dt * G.timeScale;
+  var scaledDt = dt * G.timeScale;
   G.idleTime += dt;
 
-  // Idle-анимация в меню / gameover
+  // Idle animation
   if (G.state === 'menu' || G.state === 'gameover') {
     potato.position.y = 1.15 + Math.sin(G.idleTime * 2) * 0.12;
     potato.rotation.y = Math.sin(G.idleTime * 1) * 0.35;
@@ -642,14 +1030,18 @@ function update(dt) {
 
   updateParticles(dt);
 
-  // Облака дрейфуют
-  for (const c of clouds) {
-    c.position.x -= dt * 0.4;
-    if (c.position.x < -50) c.position.x = 50;
+  // Clouds
+  for (var ci = 0; ci < clouds.length; ci++) {
+    clouds[ci].position.x -= dt * 0.4;
+    if (clouds[ci].position.x < -50) clouds[ci].position.x = 50;
   }
 
-  // Пульс солнца
   sunGlow.scale.setScalar(1 + Math.sin(G.idleTime * 0.8) * 0.08);
+
+  // Camera shake
+  if (G.cameraShake > 0) {
+    G.cameraShake = Math.max(0, G.cameraShake - dt * 4);
+  }
 
   // Dying
   if (G.state === 'dying') {
@@ -659,71 +1051,162 @@ function update(dt) {
     return;
   }
 
-  if (G.state !== 'playing') return;
+  if (G.state !== 'playing') {
+    camera.position.x = 0;
+    camera.position.y = 5;
+    camera.lookAt(0, 1.5, 0);
+    return;
+  }
 
   G.frame += scaledDt;
 
-  // Физика прыжка
+  // Determine glide state
+  G.isGliding = G.isJumping && G.jumpsLeft === 0 && G.jumpHeld && G.potatoVY < 0;
+
+  // Physics
   if (G.isJumping) {
-    G.potatoVY -= 30 * scaledDt;
+    var gravity = 30;
+    if (G.isGliding) gravity = 9;
+    G.potatoVY -= gravity * scaledDt;
     G.potatoY += G.potatoVY * scaledDt;
+
     if (G.potatoY <= 1.15) {
       G.potatoY = 1.15;
       G.potatoVY = 0;
       G.isJumping = false;
-      G.jumpsLeft = 1;
+      G.jumpsLeft = G.maxJumps;
+      G.isGliding = false;
       G.squashX = 1.3;
       G.squashY = 0.7;
+
+      // Dive destroys obstacles
+      if (G.isDiving) {
+        for (var di = G.obstacles.length - 1; di >= 0; di--) {
+          var ob = G.obstacles[di];
+          if (Math.abs(ob.position.x) < 3) {
+            spawnParticles(ob.position.x, 1, 0, 0xFF6B6B, 15, 7);
+            scene.remove(ob);
+            G.obstacles.splice(di, 1);
+            G.score += 5;
+          }
+        }
+        G.isDiving = false;
+        beep(150, 0.2, 'sawtooth', 0.06, 60);
+      }
       spawnParticles(potato.position.x, 0.1, 0, 0xD2B48C, 8, 4);
       beep(200, 0.08, 'square', 0.03);
     }
   }
 
-  // Squash easing
+  if (G.isDiving) {
+    G.diveTimer += scaledDt;
+    if (G.diveTimer > 2) G.isDiving = false;
+  }
+
+  if (G.invincibleTimer > 0) G.invincibleTimer -= dt;
+
+  // Squash
   G.squashX += (1 - G.squashX) * dt * 12;
   G.squashY += (1 - G.squashY) * dt * 12;
 
   potato.position.set(0, G.potatoY, 0);
   potato.scale.set(G.squashX, G.squashY, G.squashX);
 
-  // Вращение в прыжке
+  // Rotation
   if (G.isJumping) {
-    G.rotZ += scaledDt * 5;
+    G.rotZ += scaledDt * (G.isDiving ? 15 : 5);
   } else {
     G.rotZ *= 0.92;
     potato.rotation.y = Math.sin(G.frame * 3) * 0.08;
   }
   potato.rotation.z = G.rotZ;
 
-  // Тень под картошкой
-  const shScale = Math.max(0.3, 1 - (G.potatoY - 1.15) / 4);
+  // Shadow
+  var shScale = Math.max(0.3, 1 - (G.potatoY - 1.15) / 4);
   potatoShadow.scale.setScalar(shScale);
   potatoShadow.material.opacity = 0.35 * shScale;
 
-  // Скорость и интервал спавна
+  // Blink if invincible
+  if (G.invincibleTimer > 0) {
+    potato.visible = (Math.floor(G.frame * 10) % 2 === 0);
+  } else {
+    potato.visible = true;
+  }
+
+  // === BURMALDA follow ===
+  var targetX = potato.position.x + 2.2;
+  var targetY = G.potatoY + 0.8 + Math.sin(G.idleTime * 3) * 0.15;
+  burmalda.position.x += (targetX - burmalda.position.x) * Math.min(1, dt * 4);
+  burmalda.position.y += (targetY - burmalda.position.y) * Math.min(1, dt * 4);
+  burmalda.position.z = -0.3;
+
+  G.burmaldaFlip += dt * 15;
+  var flap = Math.sin(G.burmaldaFlip) * 0.5;
+  if (burmalda.userData.wingL) burmalda.userData.wingL.rotation.z = flap;
+  if (burmalda.userData.wingR) burmalda.userData.wingR.rotation.z = -flap;
+  burmalda.rotation.y = Math.sin(G.idleTime * 0.8) * 0.3;
+
+  // Passive coin farming
+  G.burmaldaCoinTimer += scaledDt;
+  if (G.burmaldaCoinTimer >= G.burmaldaCoinInterval) {
+    G.burmaldaCoinTimer = 0;
+    var c = createCoin();
+    c.position.set(burmalda.position.x, burmalda.position.y - 0.5, 0);
+    c.userData.baseY = c.position.y;
+    c.userData.phase = Math.random() * Math.PI * 2;
+    scene.add(c);
+    G.coins3d.push(c);
+    beep(1300, 0.08, 'sine', 0.04);
+  }
+
+  // Meter fills
+  G.burmaldaMeter = Math.min(G.burmaldaMaxMeter, G.burmaldaMeter + scaledDt * 3);
+
+  // Effect countdowns
+  if (G.burmaldaActive) {
+    G.burmaldaEffectTimer -= dt;
+    if (G.burmaldaEffectTimer <= 0) {
+      if (G.burmaldaEffect === 'double') {
+        G.scoreMultiplier = 1;
+        G.scoreMultiplierTimer = 0;
+      }
+      G.burmaldaActive = false;
+      G.burmaldaEffect = null;
+    }
+  }
+  if (G.scoreMultiplierTimer > 0) {
+    G.scoreMultiplierTimer -= dt;
+    if (G.scoreMultiplierTimer <= 0) G.scoreMultiplier = 1;
+  }
+
+  // World speed
   G.speed = Math.min(20, 8 + G.frame * 0.15);
   G.spawnInterval = Math.max(0.9, 1.4 - G.frame * 0.008);
-
-  // Прокрутка земли
   groundTexture.offset.x += scaledDt * G.speed * 0.08;
 
-  // Обновление препятствий
-  for (let i = G.obstacles.length - 1; i >= 0; i--) {
-    const o = G.obstacles[i];
+  // Move obstacles
+  for (var oi = G.obstacles.length - 1; oi >= 0; oi--) {
+    var o = G.obstacles[oi];
     o.position.x -= G.speed * scaledDt;
-    if (o.position.x < -22) { scene.remove(o); G.obstacles.splice(i, 1); }
+    if (o.position.x < -22) {
+      scene.remove(o);
+      G.obstacles.splice(oi, 1);
+    }
   }
 
-  // Обновление монет
-  for (let i = G.coins3d.length - 1; i >= 0; i--) {
-    const c = G.coins3d[i];
-    c.position.x -= G.speed * scaledDt;
-    c.rotation.z += scaledDt * 4;
-    c.position.y = c.userData.baseY + Math.sin(G.frame * 3 + c.userData.phase) * 0.2;
-    if (c.position.x < -22) { scene.remove(c); G.coins3d.splice(i, 1); }
+  // Move coins
+  for (var coi = G.coins3d.length - 1; coi >= 0; coi--) {
+    var cc = G.coins3d[coi];
+    cc.position.x -= G.speed * scaledDt;
+    cc.rotation.z += scaledDt * 4;
+    cc.position.y = cc.userData.baseY + Math.sin(G.frame * 3 + cc.userData.phase) * 0.2;
+    if (cc.position.x < -22) {
+      scene.remove(cc);
+      G.coins3d.splice(coi, 1);
+    }
   }
 
-  // Спавн
+  // Spawn
   G.spawnTimer += scaledDt;
   if (G.spawnTimer >= G.spawnInterval) {
     G.spawnTimer = 0;
@@ -731,98 +1214,140 @@ function update(dt) {
     else spawnCoin3d();
   }
 
-  // Столкновение с препятствиями
-  for (const o of G.obstacles) {
-    if (Math.abs(o.position.x) < 1.0 && G.potatoY < 2.45) {
-      gameOver();
+  // Obstacle collision
+  for (var k = 0; k < G.obstacles.length; k++) {
+    var ob2 = G.obstacles[k];
+    if (Math.abs(ob2.position.x) < 1.0 && G.potatoY < 2.45) {
+      damagePlayer();
       return;
     }
   }
 
-  // Сбор монет
-  for (let i = G.coins3d.length - 1; i >= 0; i--) {
-    const c = G.coins3d[i];
-    const dx = c.position.x - potato.position.x;
-    const dy = c.position.y - potato.position.y;
-    const dz = c.position.z - potato.position.z;
+  // Coin collision
+  for (var m = G.coins3d.length - 1; m >= 0; m--) {
+    var coin = G.coins3d[m];
+    var dx = coin.position.x - potato.position.x;
+    var dy = coin.position.y - potato.position.y;
+    var dz = coin.position.z - potato.position.z;
     if (Math.sqrt(dx*dx + dy*dy + dz*dz) < 1.5) {
       G.coins++;
-      G.score += 10;
-      spawnParticles(c.position.x, c.position.y, c.position.z, 0xFFD700, 10, 5);
+      G.score += 10 * G.scoreMultiplier;
+      G.burmaldaMeter = Math.min(G.burmaldaMaxMeter, G.burmaldaMeter + 5);
+      spawnParticles(coin.position.x, coin.position.y, coin.position.z, 0xFFD700, 10, 5);
       beep(900 + G.coins * 20, 0.08, 'sine', 0.05, 1400);
-      scene.remove(c);
-      G.coins3d.splice(i, 1);
+      scene.remove(coin);
+      G.coins3d.splice(m, 1);
     }
   }
 
-  // Очки за время
-  G.score += scaledDt * 8;
+  // Passive score
+  G.score += scaledDt * 8 * G.scoreMultiplier;
 
-  // HUD
-  document.getElementById('score').textContent = Math.floor(G.score);
-  document.getElementById('coins').textContent = G.coins;
+  updateHud();
 
-  // Лёгкое покачивание камеры
+  // Camera sway + shake
   camera.position.x = Math.sin(G.idleTime * 1.5) * 0.15;
   camera.position.y = 5 + Math.sin(G.idleTime * 1.2) * 0.1;
+  if (G.cameraShake > 0) {
+    camera.position.x += (Math.random() - 0.5) * G.cameraShake * 0.6;
+    camera.position.y += (Math.random() - 0.5) * G.cameraShake * 0.6;
+  }
   camera.lookAt(0, 1.5, 0);
 }
 
-// ═══════════════════════ LOOP ═══════════════════════
-const clock = new THREE.Clock();
+// ===== LOOP =====
+var clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.05);
-  update(dt);
-  renderer.render(scene, camera);
+  var dt = Math.min(clock.getDelta(), 0.05);
+  try {
+    update(dt);
+    renderer.render(scene, camera);
+  } catch (e) {
+    console.error('Frame error:', e);
+  }
 }
 
-// ═══════════════════════ RESIZE ═══════════════════════
-window.addEventListener('resize', () => {
+// ===== RESIZE =====
+window.addEventListener('resize', function() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// ═══════════════════════ ВВОД ═══════════════════════
-let lastInput = 0;
-function handleInput() {
-  const now = performance.now();
-  if (now - lastInput < 60) return;
-  lastInput = now;
-  if (G.state === 'playing') jump();
-}
-
-document.addEventListener('keydown', (e) => {
+// ===== INPUT =====
+document.addEventListener('keydown', function(e) {
+  if (e.repeat) return;
   if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
     e.preventDefault();
-    if (G.state === 'playing') jump();
-    else if (G.state === 'menu' || G.state === 'gameover') startGame();
+    if (G.state === 'playing') {
+      jump();
+      G.jumpHeld = true;
+    } else if (G.state === 'menu' || G.state === 'gameover') {
+      startGame();
+    }
   }
-  if (e.code === 'Escape' && (G.state === 'playing' || G.state === 'dying')) {
-    goToMenu();
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+    e.preventDefault();
+    if (G.state === 'playing') dive();
+  }
+  if (e.code === 'KeyE' || e.code === 'KeyQ') {
+    e.preventDefault();
+    if (G.state === 'playing') activateBurmalda();
+  }
+  if (e.code === 'Escape') {
+    if (G.state === 'playing' || G.state === 'dying') goToMenu();
   }
 });
 
-renderer.domElement.addEventListener('mousedown', handleInput);
-renderer.domElement.addEventListener('touchstart', (e) => {
+document.addEventListener('keyup', function(e) {
+  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+    G.jumpHeld = false;
+  }
+});
+
+renderer.domElement.addEventListener('mousedown', function() {
+  if (G.state === 'playing') {
+    jump();
+    G.jumpHeld = true;
+  }
+});
+renderer.domElement.addEventListener('mouseup', function() {
+  G.jumpHeld = false;
+});
+renderer.domElement.addEventListener('touchstart', function(e) {
   e.preventDefault();
-  handleInput();
+  if (G.state === 'playing') {
+    jump();
+    G.jumpHeld = true;
+  }
 }, { passive: false });
-
-document.getElementById('playBtn').addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
-document.getElementById('restartBtn').addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
-document.getElementById('menuBtn').addEventListener('click', (e) => { e.stopPropagation(); goToMenu(); });
-
-document.querySelectorAll('button').forEach(b => {
-  b.addEventListener('mousedown', e => e.stopPropagation());
-  b.addEventListener('touchstart', e => e.stopPropagation(), { passive: false });
+renderer.domElement.addEventListener('touchend', function() {
+  G.jumpHeld = false;
 });
 
-// ═══════════════════════ СТАРТ ═══════════════════════
+// ===== BUTTONS =====
+function wireButton(id, fn) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    try { fn(); } catch (err) { console.error(id + ' error:', err); }
+  });
+  el.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+  el.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: false });
+}
+
+wireButton('playBtn', startGame);
+wireButton('restartBtn', startGame);
+wireButton('menuBtn', goToMenu);
+
+// ===== START =====
+document.getElementById('loading').style.display = 'none';
 animate();
 
-})();
+} // end initGame
 </script>
 </body>
 </html>
