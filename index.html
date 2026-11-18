@@ -3,395 +3,825 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>🥔 Прыгающая Картошка</title>
+<title>🥔 POTATO RUN 3D</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
-    height: 100%; width: 100%;
-    background: radial-gradient(circle at 50% 30%, #2b2b4a, #12121f);
-    display: flex; justify-content: center; align-items: center;
+    width: 100%; height: 100%; overflow: hidden;
+    background: #000;
     font-family: 'Segoe UI', system-ui, sans-serif;
-    overflow: hidden; touch-action: none;
-    -webkit-user-select: none; user-select: none;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
-  #game {
-    position: relative; width: 800px; height: 500px;
-    background: linear-gradient(#87CEEB 0%, #B0E2FF 60%, #E0F6FF 100%);
-    border-radius: 20px; overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 0 0 3px rgba(255,255,255,0.3);
-    flex-shrink: 0; transform-origin: center center;
-  }
-  #sun { position: absolute; top: 20px; right: 30px; font-size: 60px;
-    filter: drop-shadow(0 0 20px rgba(255,220,0,0.8)); z-index: 1; }
-  #cloud1, #cloud2 { position: absolute; font-size: 50px; opacity: 0.9; z-index: 1; }
-  #cloud1 { top: 50px; animation: drift 25s linear infinite; }
-  #cloud2 { top: 120px; animation: drift 35s linear infinite; animation-delay: -10s; }
-  @keyframes drift { from { left: 100%; } to { left: -150px; } }
+  #container { width: 100%; height: 100%; }
+  canvas { display: block; }
 
-  #ground {
-    position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
-    background: linear-gradient(to bottom, #7BA428 0px, #7BA428 6px, #8B4513 6px, #5C3317 100%);
-    z-index: 2;
+  #ui {
+    position: fixed; top: 20px; left: 20px;
+    color: #fff; font-weight: 800; z-index: 10; pointer-events: none;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    line-height: 1.3;
   }
-  #shadow {
-    position: absolute; left: 105px; bottom: 68px; width: 50px; height: 14px;
-    background: rgba(0,0,0,0.3); border-radius: 50%; filter: blur(2px);
-    will-change: transform, opacity; z-index: 3;
-  }
-  #potato {
-    position: absolute; left: 100px; bottom: 80px;
-    width: 60px; height: 60px; font-size: 52px; line-height: 60px;
-    text-align: center; will-change: bottom, transform;
-    filter: drop-shadow(2px 4px 3px rgba(0,0,0,0.35)); z-index: 5;
-  }
-  .obstacle {
-    position: absolute; width: 50px; height: 50px;
-    font-size: 46px; line-height: 50px; text-align: center;
-    filter: drop-shadow(2px 3px 2px rgba(0,0,0,0.3)); z-index: 4;
-  }
-  .coin {
-    position: absolute; width: 40px; height: 40px;
-    font-size: 36px; line-height: 40px; text-align: center;
-    animation: spin 0.8s linear infinite;
-    filter: drop-shadow(0 0 6px rgba(255,215,0,0.7)); z-index: 4;
-  }
-  @keyframes spin { 0%,100% { transform: scaleX(1); } 50% { transform: scaleX(0.3); } }
-
-  #hud {
-    position: absolute; top: 16px; left: 20px;
-    color: #223; font-size: 22px; font-weight: 800;
-    text-shadow: 2px 2px 0 rgba(255,255,255,0.9);
-    z-index: 10; line-height: 1.5;
-  }
-  #hud .label { color: #445; }
-  #hud #score, #hud #best { color: #b8860b; }
+  #ui .lbl { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 2px; }
+  #ui .val { font-size: 38px; color: #FFD700; text-shadow: 0 0 15px rgba(255,215,0,0.6), 2px 2px 4px rgba(0,0,0,0.8); }
+  #ui .coins { font-size: 18px; color: #4FC3F7; margin-top: 4px; text-shadow: 0 0 10px rgba(79,195,247,0.6), 1px 1px 2px rgba(0,0,0,0.8); }
 
   .overlay {
-    position: absolute; inset: 0; z-index: 100;
-    flex-direction: column; justify-content: center; align-items: center;
-    text-align: center; padding: 20px; color: white;
+    position: fixed; inset: 0; z-index: 20;
+    display: none; flex-direction: column;
+    justify-content: center; align-items: center;
+    color: #fff; text-align: center;
+    background: radial-gradient(circle at 50% 30%, rgba(30,20,60,0.85), rgba(5,5,15,0.96));
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   }
-  #startScreen {
-    display: flex;
-    background: linear-gradient(135deg, rgba(20,20,50,0.8), rgba(60,20,90,0.8));
-    backdrop-filter: blur(6px);
-  }
-  #gameOver { display: none; background: rgba(10,10,25,0.9); backdrop-filter: blur(6px); }
-  #gameOver.show { display: flex; }
-
+  .overlay.show { display: flex; }
   .overlay h1 {
-    font-size: 52px; margin-bottom: 16px;
-    text-shadow: 0 4px 0 #000, 0 8px 20px rgba(0,0,0,0.5);
+    font-size: 62px; letter-spacing: 3px; margin-bottom: 8px;
+    background: linear-gradient(180deg, #FFE45C, #FF8800 60%, #B84500);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 4px 0 rgba(0,0,0,0.5)) drop-shadow(0 8px 25px rgba(255,140,0,0.5));
+  }
+  .overlay h1.dead {
+    background: linear-gradient(180deg, #FF6B6B, #B00020 70%);
+    -webkit-background-clip: text; background-clip: text;
+  }
+  .overlay .sub { font-size: 14px; opacity: 0.7; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 30px; }
+  .overlay .stats {
+    display: flex; gap: 36px; margin: 20px 0 28px;
+    padding: 20px 40px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+  }
+  .overlay .stat { display: flex; flex-direction: column; align-items: center; min-width: 80px; }
+  .overlay .stat-label { font-size: 11px; opacity: 0.6; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .overlay .stat-value { font-size: 28px; font-weight: 900; color: #FFD700; }
+  .overlay .stat-value.blue { color: #4FC3F7; }
+  .overlay .stat-value.green { color: #81C784; }
+
+  .btn {
+    padding: 18px 56px; font-size: 22px; font-weight: 900; letter-spacing: 2px;
+    background: linear-gradient(180deg, #FFD700, #FF8800);
+    color: #3a1f00; border: none; border-radius: 14px; cursor: pointer;
+    box-shadow: 0 6px 0 #a35f00, 0 14px 30px rgba(255,140,0,0.4);
+    transition: all 0.1s; font-family: inherit;
+    text-transform: uppercase; margin: 4px;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #a35f00; }
+  .btn.secondary {
+    background: linear-gradient(180deg, #6a6a9a, #3a3a6a);
+    color: #fff; box-shadow: 0 6px 0 #1a1a3a;
+  }
+  .btn.secondary:active { box-shadow: 0 2px 0 #1a1a3a; }
+
+  .hint {
+    position: fixed; bottom: 18px; left: 0; right: 0;
+    text-align: center; color: rgba(255,255,255,0.55);
+    font-size: 13px; z-index: 10; pointer-events: none;
     letter-spacing: 1px;
   }
-  .overlay .subtitle { font-size: 20px; margin-bottom: 28px; opacity: 0.85; }
-  .overlay button {
-    padding: 16px 60px; font-size: 24px; font-weight: 900;
-    background: linear-gradient(#FFD700, #FFA500); color: #4a2c00;
-    border: none; border-radius: 16px; cursor: pointer;
-    box-shadow: 0 6px 0 #a86e00, 0 12px 24px rgba(0,0,0,0.5);
-    transition: transform 0.1s, box-shadow 0.1s;
-    font-family: inherit; letter-spacing: 1px; margin-bottom: 20px;
+  .new-record {
+    font-size: 22px; font-weight: 900; color: #FFD700;
+    margin: 10px 0; letter-spacing: 2px;
+    animation: glow 0.8s ease-in-out infinite alternate;
   }
-  .overlay button:hover { filter: brightness(1.08); }
-  .overlay button:active { transform: translateY(4px); box-shadow: 0 2px 0 #a86e00, 0 6px 12px rgba(0,0,0,0.5); }
-  .overlay .controls { font-size: 16px; opacity: 0.7; margin-top: 10px; }
-  .overlay .final { font-size: 24px; margin-bottom: 12px; }
-  .overlay .newRecord {
-    font-size: 26px; color: #FFD700; font-weight: 800;
-    margin-bottom: 20px; animation: bounce 0.6s ease-in-out infinite alternate;
+  @keyframes glow {
+    from { filter: drop-shadow(0 0 8px rgba(255,215,0,0.6)); transform: scale(1); }
+    to   { filter: drop-shadow(0 0 22px rgba(255,215,0,1)); transform: scale(1.05); }
   }
-  @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
 </style>
 </head>
 <body>
-<div id="game">
-  <div id="sun">☀️</div>
-  <div id="cloud1">☁️</div>
-  <div id="cloud2">☁️</div>
-  <div id="ground"></div>
-  <div id="shadow"></div>
-  <div id="potato">🥔</div>
+<div id="container"></div>
 
-  <div id="hud">
-    <div><span class="label">Счёт:</span> <span id="score">0</span></div>
-    <div><span class="label">Рекорд:</span> <span id="best">0</span></div>
+<div id="ui">
+  <div class="lbl">Счёт</div>
+  <div class="val" id="score">0</div>
+  <div class="coins">🪙 <span id="coins">0</span></div>
+</div>
+
+<div id="menuScreen" class="overlay show">
+  <h1>POTATO RUN 3D</h1>
+  <p class="sub">Прыгай · Уворачивайся · Собирай</p>
+  <button class="btn" id="playBtn">▶ ИГРАТЬ</button>
+</div>
+
+<div id="gameOverScreen" class="overlay">
+  <h1 class="dead">ИГРА ОКОНЧЕНА</h1>
+  <p class="sub">Попробуй ещё раз</p>
+  <div class="new-record" id="newRecord" style="display:none">🏆 НОВЫЙ РЕКОРД!</div>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Счёт</div><div class="stat-value" id="finalScore">0</div></div>
+    <div class="stat"><div class="stat-label">Монеты</div><div class="stat-value blue" id="finalCoins">0</div></div>
+    <div class="stat"><div class="stat-label">Рекорд</div><div class="stat-value green" id="finalBest">0</div></div>
   </div>
-
-  <div id="startScreen" class="overlay">
-    <h1>🥔 ПОТАТО РАН</h1>
-    <p class="subtitle">Прыгай, уворачивайся, собирай монеты!</p>
-    <button id="playBtn">▶ ИГРАТЬ</button>
-    <p class="controls">ПРОБЕЛ / КЛИК / ТАП — прыжок</p>
-  </div>
-
-  <div id="gameOver" class="overlay">
-    <h1>💀 ИГРА ОКОНЧЕНА</h1>
-    <p class="final">Твой счёт: <span id="finalScore">0</span></p>
-    <p class="newRecord" id="newRecord" style="display:none">🏆 НОВЫЙ РЕКОРД!</p>
-    <button id="restartBtn">🔄 ИГРАТЬ СНОВА</button>
+  <div>
+    <button class="btn" id="restartBtn">🔄 ЕЩЁ РАЗ</button>
+    <button class="btn secondary" id="menuBtn">В МЕНЮ</button>
   </div>
 </div>
 
+<div class="hint">ПРОБЕЛ / КЛИК / ТАП — прыжок &nbsp;·&nbsp; ESC — выход</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-(function () {
-  'use strict';
+(function() {
+'use strict';
 
-  const gameEl = document.getElementById('game');
-  const potatoEl = document.getElementById('potato');
-  const shadowEl = document.getElementById('shadow');
-  const scoreEl = document.getElementById('score');
-  const bestEl = document.getElementById('best');
-  const startScreen = document.getElementById('startScreen');
-  const gameOverScreen = document.getElementById('gameOver');
-  const finalScoreEl = document.getElementById('finalScore');
-  const newRecordEl = document.getElementById('newRecord');
-  const playBtn = document.getElementById('playBtn');
-  const restartBtn = document.getElementById('restartBtn');
+// ═══════════════════════ ПРОВЕРКА THREE ═══════════════════════
+if (typeof THREE === 'undefined') {
+  document.body.innerHTML = '<div style="color:white;text-align:center;padding-top:100px;font-family:sans-serif;"><h1>⚠️ Не удалось загрузить Three.js</h1><p style="margin-top:20px;opacity:0.7;">Проверь подключение к интернету и перезагрузи страницу.</p></div>';
+  return;
+}
 
-  const GROUND_Y = 80;
-  const POTATO_X = 100;
-  const POTATO_SIZE = 60;
-  const GRAVITY = 0.9;
-  const JUMP_V = 20;
-  const OBST_W = 50;
-  const OBST_H = 50;
-  const COIN_SIZE = 40;
-  const SPAWN_X = 820;
+// ═══════════════════════ SETUP ═══════════════════════
+const container = document.getElementById('container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87CEEB);
+scene.fog = new THREE.Fog(0x87CEEB, 30, 80);
 
-  let state = 'menu';
-  let potatoY = GROUND_Y;
-  let velocity = 0;
-  let isJumping = false;
-  let score = 0;
-  let best = Number(localStorage.getItem('potatoBest')) || 0;
-  let frame = 0;
-  let spawnTimer = 0;
-  let scoreTimer = 0;
-  let obstacles = [];
-  let coins = [];
-  let lastTime = 0;
-  let rafId = null;
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(0, 5, 15);
+camera.lookAt(0, 1.5, 0);
 
-  bestEl.textContent = best;
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
 
-  // --- Звук ---
-  let audioCtx = null;
-  function beep(freq, dur, type, vol) {
-    try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const o = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      o.type = type || 'square';
-      o.frequency.value = freq;
-      g.gain.value = vol || 0.05;
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start();
-      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
-      o.stop(audioCtx.currentTime + dur + 0.02);
-    } catch (e) {}
+// ═══════════════════════ СВЕТ ═══════════════════════
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445544, 0.4));
+
+const sunLight = new THREE.DirectionalLight(0xfff5e0, 0.95);
+sunLight.position.set(12, 25, 15);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048);
+sunLight.shadow.camera.left = -30;
+sunLight.shadow.camera.right = 30;
+sunLight.shadow.camera.top = 30;
+sunLight.shadow.camera.bottom = -30;
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = 80;
+sunLight.shadow.bias = -0.0005;
+scene.add(sunLight);
+
+// ═══════════════════════ НЕБО / ФОН ═══════════════════════
+const sunMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(2, 24, 24),
+  new THREE.MeshBasicMaterial({ color: 0xFFEB3B })
+);
+sunMesh.position.set(22, 32, -45);
+scene.add(sunMesh);
+
+const sunGlow = new THREE.Mesh(
+  new THREE.SphereGeometry(3.6, 20, 20),
+  new THREE.MeshBasicMaterial({ color: 0xFFFF88, transparent: true, opacity: 0.22 })
+);
+sunGlow.position.copy(sunMesh.position);
+scene.add(sunGlow);
+
+const clouds = [];
+function makeCloud(x, y, z, s) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 });
+  const a = new THREE.Mesh(new THREE.SphereGeometry(1.5, 10, 10), mat);
+  const b = new THREE.Mesh(new THREE.SphereGeometry(2.0, 10, 10), mat);
+  const c = new THREE.Mesh(new THREE.SphereGeometry(1.6, 10, 10), mat);
+  b.position.set(1.5, 0.3, 0);
+  c.position.set(-1.5, 0.2, 0);
+  g.add(a, b, c);
+  g.position.set(x, y, z);
+  g.scale.setScalar(s);
+  scene.add(g);
+  clouds.push(g);
+  return g;
+}
+makeCloud(-15, 12, -25, 1.2);
+makeCloud(8, 14, -30, 1.5);
+makeCloud(22, 10, -35, 1.0);
+makeCloud(-25, 15, -40, 1.3);
+makeCloud(5, 9, -20, 0.9);
+
+function makeMountain(x, z, w, h, color) {
+  const m = new THREE.Mesh(
+    new THREE.ConeGeometry(w, h, 4),
+    new THREE.MeshStandardMaterial({ color: color, roughness: 1, flatShading: true })
+  );
+  m.position.set(x, h / 2 - 1, z);
+  m.rotation.y = Math.PI / 4;
+  scene.add(m);
+  return m;
+}
+makeMountain(-35, -55, 15, 22, 0x5B7DB1);
+makeMountain(-12, -60, 18, 26, 0x4A6A99);
+makeMountain(14, -58, 14, 20, 0x5B7DB1);
+makeMountain(38, -60, 16, 24, 0x4A6A99);
+makeMountain(-60, -62, 20, 28, 0x3D5A80);
+makeMountain(65, -63, 18, 24, 0x3D5A80);
+
+// ═══════════════════════ ЗЕМЛЯ ═══════════════════════
+function makeGroundTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = '#7BA428';
+  g.fillRect(0, 0, 512, 512);
+  g.fillStyle = '#6B8E23';
+  for (let i = 0; i < 512; i += 24) g.fillRect(i, 0, 12, 512);
+  g.fillStyle = 'rgba(170,210,90,0.3)';
+  for (let i = 12; i < 512; i += 48) g.fillRect(i, 0, 6, 512);
+  g.fillStyle = 'rgba(139,69,19,0.12)';
+  for (let i = 0; i < 20; i++) {
+    g.beginPath();
+    g.arc(Math.random() * 512, Math.random() * 512, 5 + Math.random() * 10, 0, Math.PI * 2);
+    g.fill();
   }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(30, 1);
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return tex;
+}
 
-  function jump() {
-    if (state !== 'playing' || isJumping) return;
-    velocity = JUMP_V;
-    isJumping = true;
-    beep(600, 0.08, 'square', 0.04);
+const groundTexture = makeGroundTexture();
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(300, 40),
+  new THREE.MeshStandardMaterial({ map: groundTexture, roughness: 1 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const dirt = new THREE.Mesh(
+  new THREE.BoxGeometry(300, 0.5, 40),
+  new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 1 })
+);
+dirt.position.y = -0.26;
+dirt.receiveShadow = true;
+scene.add(dirt);
+
+// ═══════════════════════ КАРТОШКА ═══════════════════════
+function createPotato() {
+  const group = new THREE.Group();
+
+  // Тело с неровностями
+  const bodyGeo = new THREE.SphereGeometry(1, 40, 40);
+  const pos = bodyGeo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const lump =
+      Math.sin(x * 3.1) * Math.cos(y * 2.7) * Math.sin(z * 3.4) * 0.09 +
+      Math.sin(x * 6 + 1) * Math.cos(y * 5) * 0.03;
+    const s = 1 + lump;
+    pos.setXYZ(i, x * s, y * s, z * s);
   }
+  bodyGeo.computeVertexNormals();
 
-  function spawnObstacle() {
-    const types = ['🌵', '🪨', '🌰', '🧱', '💀'];
-    const el = document.createElement('div');
-    el.className = 'obstacle';
-    el.textContent = types[(Math.random() * types.length) | 0];
-    el.style.left = SPAWN_X + 'px';
-    el.style.bottom = GROUND_Y + 'px';
-    gameEl.appendChild(el);
-    obstacles.push({ el: el, x: SPAWN_X });
-  }
+  const body = new THREE.Mesh(
+    bodyGeo,
+    new THREE.MeshStandardMaterial({ color: 0xC4A76A, roughness: 0.85, metalness: 0.05 })
+  );
+  body.scale.set(1.15, 0.95, 1);
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
 
-  function spawnCoin() {
-    const el = document.createElement('div');
-    el.className = 'coin';
-    el.textContent = Math.random() < 0.5 ? '🪙' : '⭐';
-    el.style.left = SPAWN_X + 'px';
-    const heights = [GROUND_Y + 100, GROUND_Y + 150, GROUND_Y + 200];
-    const bottom = heights[(Math.random() * heights.length) | 0];
-    el.style.bottom = bottom + 'px';
-    gameEl.appendChild(el);
-    coins.push({ el: el, x: SPAWN_X, bottom: bottom });
-  }
+  // Белки глаз
+  const eyeWGeo = new THREE.SphereGeometry(0.18, 16, 16);
+  const eyeWMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+  const eyeWL = new THREE.Mesh(eyeWGeo, eyeWMat);
+  eyeWL.position.set(-0.3, 0.15, 0.88);
+  group.add(eyeWL);
+  const eyeWR = new THREE.Mesh(eyeWGeo, eyeWMat);
+  eyeWR.position.set(0.3, 0.15, 0.88);
+  group.add(eyeWR);
 
-  function resetGame() {
-    for (let i = 0; i < obstacles.length; i++) obstacles[i].el.remove();
-    for (let i = 0; i < coins.length; i++) coins[i].el.remove();
-    obstacles = [];
-    coins = [];
-    potatoY = GROUND_Y;
-    velocity = 0;
-    isJumping = false;
-    score = 0;
-    frame = 0;
-    spawnTimer = 0;
-    scoreTimer = 0;
-    scoreEl.textContent = '0';
-    potatoEl.style.bottom = potatoY + 'px';
-    potatoEl.style.transform = 'rotate(0deg)';
-    shadowEl.style.transform = 'scale(1)';
-    shadowEl.style.opacity = '1';
-  }
+  // Зрачки
+  const pupilGeo = new THREE.SphereGeometry(0.1, 12, 12);
+  const pupilMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.2 });
+  const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
+  pupilL.position.set(-0.32, 0.15, 1.0);
+  group.add(pupilL);
+  const pupilR = new THREE.Mesh(pupilGeo, pupilMat);
+  pupilR.position.set(0.28, 0.15, 1.0);
+  group.add(pupilR);
 
-  function startGame() {
-    if (rafId) cancelAnimationFrame(rafId);
-    resetGame();
-    startScreen.style.display = 'none';
-    gameOverScreen.classList.remove('show');
-    state = 'playing';
-    lastTime = performance.now();
-    rafId = requestAnimationFrame(loop);
-  }
+  // Блики
+  const shineGeo = new THREE.SphereGeometry(0.04, 8, 8);
+  const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const shineL = new THREE.Mesh(shineGeo, shineMat);
+  shineL.position.set(-0.29, 0.19, 1.08);
+  group.add(shineL);
+  const shineR = new THREE.Mesh(shineGeo, shineMat);
+  shineR.position.set(0.31, 0.19, 1.08);
+  group.add(shineR);
 
-  function gameOver() {
-    state = 'gameover';
-    beep(150, 0.4, 'sawtooth', 0.08);
-    const isRecord = score > best;
-    if (isRecord) {
-      best = score;
-      try { localStorage.setItem('potatoBest', String(best)); } catch (e) {}
-      bestEl.textContent = best;
+  // Улыбка
+  const mouth = new THREE.Mesh(
+    new THREE.TorusGeometry(0.16, 0.03, 8, 16, Math.PI),
+    new THREE.MeshStandardMaterial({ color: 0x4a2a0a, roughness: 0.8 })
+  );
+  mouth.rotation.z = Math.PI;
+  mouth.rotation.x = -0.2;
+  mouth.position.set(0, -0.12, 0.94);
+  group.add(mouth);
+
+  // Румянец
+  const cheekGeo = new THREE.SphereGeometry(0.11, 12, 12);
+  const cheekMat = new THREE.MeshStandardMaterial({ color: 0xFF8888, roughness: 0.9, transparent: true, opacity: 0.7 });
+  const cheekL = new THREE.Mesh(cheekGeo, cheekMat);
+  cheekL.scale.set(1.3, 0.7, 0.4);
+  cheekL.position.set(-0.5, -0.1, 0.82);
+  group.add(cheekL);
+  const cheekR = new THREE.Mesh(cheekGeo, cheekMat);
+  cheekR.scale.set(1.3, 0.7, 0.4);
+  cheekR.position.set(0.5, -0.1, 0.82);
+  group.add(cheekR);
+
+  // Хвостик
+  const stem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.04, 0.06, 0.15, 8),
+    new THREE.MeshStandardMaterial({ color: 0x6B8E23, roughness: 0.9 })
+  );
+  stem.position.set(0.1, 0.98, 0);
+  stem.rotation.z = -0.2;
+  group.add(stem);
+
+  return group;
+}
+
+const potato = createPotato();
+potato.position.set(0, 1.15, 0);
+scene.add(potato);
+
+// Тень-пятно под картошкой
+const potatoShadow = new THREE.Mesh(
+  new THREE.CircleGeometry(0.85, 32),
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false })
+);
+potatoShadow.rotation.x = -Math.PI / 2;
+potatoShadow.position.set(0, 0.02, 0);
+scene.add(potatoShadow);
+
+// ═══════════════════════ ФАБРИКИ ═══════════════════════
+function createObstacle() {
+  const types = ['cactus', 'rock', 'spike'];
+  const type = types[Math.floor(Math.random() * types.length)];
+  const g = new THREE.Group();
+
+  if (type === 'cactus') {
+    const mat = new THREE.MeshStandardMaterial({ color: 0x2E7D32, roughness: 0.7 });
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 1.5, 12), mat);
+    trunk.position.y = 0.75; trunk.castShadow = true;
+    g.add(trunk);
+    const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 0.6, 10), mat);
+    arm1.position.set(0.35, 1.0, 0);
+    arm1.rotation.z = -Math.PI / 3;
+    arm1.castShadow = true;
+    g.add(arm1);
+    const arm2 = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 0.5, 10), mat);
+    arm2.position.set(-0.3, 0.85, 0);
+    arm2.rotation.z = Math.PI / 3;
+    arm2.castShadow = true;
+    g.add(arm2);
+    const flower = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), new THREE.MeshStandardMaterial({ color: 0xFF4081 }));
+    flower.position.y = 1.55;
+    g.add(flower);
+  } else if (type === 'rock') {
+    const geo = new THREE.DodecahedronGeometry(0.75, 0);
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const s = 0.8 + Math.random() * 0.4;
+      p.setXYZ(i, p.getX(i) * s, p.getY(i) * s, p.getZ(i) * s);
     }
-    finalScoreEl.textContent = score;
-    newRecordEl.style.display = isRecord ? 'block' : 'none';
-    gameOverScreen.classList.add('show');
+    geo.computeVertexNormals();
+    const rock = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x6B6B6B, roughness: 1, flatShading: true }));
+    rock.position.y = 0.75; rock.castShadow = true;
+    g.add(rock);
+  } else {
+    const spikeMat = new THREE.MeshStandardMaterial({ color: 0xBDBDBD, metalness: 0.7, roughness: 0.3 });
+    for (let i = 0; i < 3; i++) {
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.2, 1.4, 8), spikeMat);
+      spike.position.set(-0.5 + i * 0.5, 0.7, 0);
+      spike.castShadow = true;
+      g.add(spike);
+    }
+    const base = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.2, 0.4), new THREE.MeshStandardMaterial({ color: 0x424242 }));
+    base.position.y = 0.1; base.castShadow = true;
+    g.add(base);
+  }
+  return g;
+}
+
+function createCoin() {
+  const g = new THREE.Group();
+  const coin = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.4, 0.4, 0.1, 24),
+    new THREE.MeshStandardMaterial({
+      color: 0xFFD700, metalness: 1, roughness: 0.25,
+      emissive: 0x664400, emissiveIntensity: 0.35
+    })
+  );
+  coin.rotation.x = Math.PI / 2;
+  coin.castShadow = true;
+  g.add(coin);
+  const star = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.15, 0.15, 0.12, 5),
+    new THREE.MeshStandardMaterial({ color: 0xFFEB3B, metalness: 1, roughness: 0.2 })
+  );
+  star.rotation.x = Math.PI / 2;
+  star.position.z = 0.01;
+  g.add(star);
+  return g;
+}
+
+// ═══════════════════════ ЧАСТИЦЫ ═══════════════════════
+const particlePool = [];
+const MAX_PARTICLES = 80;
+for (let i = 0; i < MAX_PARTICLES; i++) {
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.09, 6, 6),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 })
+  );
+  mesh.visible = false;
+  scene.add(mesh);
+  particlePool.push({ mesh, life: 0, maxLife: 1, vx: 0, vy: 0, vz: 0 });
+}
+
+function spawnParticles(x, y, z, color, count, power) {
+  count = count || 8; power = power || 4;
+  for (let i = 0; i < count; i++) {
+    const p = particlePool.find(pp => pp.life <= 0);
+    if (!p) return;
+    p.mesh.position.set(x, y, z);
+    p.mesh.material.color.setHex(color);
+    p.mesh.material.opacity = 1;
+    p.mesh.visible = true;
+    p.vx = (Math.random() - 0.5) * power;
+    p.vy = Math.random() * power * 0.8 + power * 0.3;
+    p.vz = (Math.random() - 0.5) * power * 0.5;
+    p.life = 1;
+    p.maxLife = 0.6 + Math.random() * 0.4;
+  }
+}
+
+function updateParticles(dt) {
+  for (const p of particlePool) {
+    if (p.life > 0) {
+      p.life -= dt / p.maxLife;
+      p.mesh.position.x += p.vx * dt;
+      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.z += p.vz * dt;
+      p.vy -= 18 * dt;
+      p.mesh.material.opacity = Math.max(0, p.life);
+      if (p.life <= 0) p.mesh.visible = false;
+    }
+  }
+}
+
+// ═══════════════════════ ЗВУК ═══════════════════════
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function beep(freq, dur, type, vol, slideTo) {
+  ensureAudio();
+  if (!audioCtx) return;
+  try {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type || 'square';
+    o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, audioCtx.currentTime + dur);
+    g.gain.setValueAtTime(vol || 0.04, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur + 0.02);
+  } catch(e) {}
+}
+
+// ═══════════════════════ СОСТОЯНИЕ ═══════════════════════
+const G = {
+  state: 'menu',
+  score: 0,
+  coins: 0,
+  best: parseInt(localStorage.getItem('potato3dBest') || '0'),
+  frame: 0,
+  idleTime: 0,
+  timeScale: 1,
+  spawnTimer: 0,
+  spawnInterval: 1.4,
+  speed: 8,
+  potatoY: 1.15,
+  potatoVY: 0,
+  isJumping: false,
+  jumpsLeft: 1,
+  squashX: 1,
+  squashY: 1,
+  rotZ: 0,
+  dyingTimer: 0,
+  obstacles: [],
+  coins3d: []
+};
+
+document.getElementById('finalBest').textContent = G.best;
+
+// ═══════════════════════ СПАВН / ПРЫЖОК ═══════════════════════
+function spawnObstacle() {
+  const o = createObstacle();
+  o.position.set(18, 0, 0);
+  scene.add(o);
+  G.obstacles.push(o);
+}
+
+function spawnCoin3d() {
+  const c = createCoin();
+  const heights = [1.5, 2.8, 4.0];
+  const y = heights[Math.floor(Math.random() * heights.length)];
+  c.position.set(18, y, 0);
+  c.userData.baseY = y;
+  c.userData.phase = Math.random() * Math.PI * 2;
+  scene.add(c);
+  G.coins3d.push(c);
+}
+
+function jump() {
+  if (G.state !== 'playing') return;
+  if (G.jumpsLeft <= 0) return;
+  G.potatoVY = 13;
+  G.isJumping = true;
+  G.jumpsLeft--;
+  G.squashX = 0.8;
+  G.squashY = 1.2;
+  spawnParticles(potato.position.x, 0.1, 0, 0xD2B48C, 10, 5);
+  beep(G.jumpsLeft === 0 ? 700 : 550, 0.1, 'square', 0.05, G.jumpsLeft === 0 ? 500 : 400);
+}
+
+// ═══════════════════════ ПЕРЕХОДЫ ═══════════════════════
+function startGame() {
+  for (const o of G.obstacles) scene.remove(o);
+  for (const c of G.coins3d) scene.remove(c);
+  G.obstacles = []; G.coins3d = [];
+  G.score = 0; G.coins = 0; G.frame = 0;
+  G.speed = 8; G.spawnTimer = 0; G.spawnInterval = 1.4;
+  G.potatoY = 1.15; G.potatoVY = 0; G.isJumping = false;
+  G.jumpsLeft = 1; G.squashX = 1; G.squashY = 1;
+  G.rotZ = 0; G.timeScale = 1; G.dyingTimer = 0;
+  potato.position.set(0, 1.15, 0);
+  potato.rotation.set(0, 0, 0);
+  potato.scale.set(1, 1, 1);
+  potato.visible = true;
+  document.getElementById('score').textContent = '0';
+  document.getElementById('coins').textContent = '0';
+  document.getElementById('menuScreen').classList.remove('show');
+  document.getElementById('gameOverScreen').classList.remove('show');
+  G.state = 'playing';
+  ensureAudio();
+  beep(880, 0.15, 'sine', 0.08, 1760);
+}
+
+function gameOver() {
+  G.state = 'dying';
+  G.dyingTimer = 0;
+  G.timeScale = 0.25;
+  spawnParticles(potato.position.x, potato.position.y, 0, 0xC4A76A, 20, 8);
+  spawnParticles(potato.position.x, potato.position.y, 0, 0xFF6B6B, 15, 6);
+  beep(150, 0.5, 'sawtooth', 0.1, 60);
+  beep(80, 0.6, 'square', 0.06, 40);
+  potato.visible = false;
+}
+
+function finishGameOver() {
+  G.state = 'gameover';
+  const isRecord = G.score > G.best;
+  if (isRecord) {
+    G.best = Math.floor(G.score);
+    try { localStorage.setItem('potato3dBest', String(G.best)); } catch(e){}
+  }
+  document.getElementById('finalScore').textContent = Math.floor(G.score);
+  document.getElementById('finalCoins').textContent = G.coins;
+  document.getElementById('finalBest').textContent = G.best;
+  document.getElementById('newRecord').style.display = isRecord ? 'block' : 'none';
+  document.getElementById('gameOverScreen').classList.add('show');
+  potato.visible = true;
+  G.timeScale = 1;
+}
+
+function goToMenu() {
+  G.state = 'menu';
+  document.getElementById('gameOverScreen').classList.remove('show');
+  document.getElementById('menuScreen').classList.add('show');
+  for (const o of G.obstacles) scene.remove(o);
+  for (const c of G.coins3d) scene.remove(c);
+  G.obstacles = []; G.coins3d = [];
+  potato.visible = true;
+  potato.position.set(0, 1.15, 0);
+  potato.rotation.set(0, 0, 0);
+  potato.scale.set(1, 1, 1);
+  G.timeScale = 1;
+}
+
+// ═══════════════════════ UPDATE ═══════════════════════
+function update(dt) {
+  const scaledDt = dt * G.timeScale;
+  G.idleTime += dt;
+
+  // Idle-анимация в меню / gameover
+  if (G.state === 'menu' || G.state === 'gameover') {
+    potato.position.y = 1.15 + Math.sin(G.idleTime * 2) * 0.12;
+    potato.rotation.y = Math.sin(G.idleTime * 1) * 0.35;
+    potato.rotation.z = Math.sin(G.idleTime * 0.7) * 0.05;
   }
 
-  function loop(now) {
-    if (state !== 'playing') return;
+  updateParticles(dt);
 
-    const dtRaw = (now - lastTime) / 16.667;
-    const dt = Math.max(0.1, Math.min(3, dtRaw));
-    lastTime = now;
-    frame += dt;
-
-    // Физика
-    if (isJumping || potatoY > GROUND_Y) {
-      potatoY += velocity * dt;
-      velocity -= GRAVITY * dt;
-      if (potatoY <= GROUND_Y) {
-        potatoY = GROUND_Y;
-        velocity = 0;
-        if (isJumping) beep(280, 0.06, 'square', 0.03);
-        isJumping = false;
-      }
-    }
-    potatoEl.style.bottom = potatoY + 'px';
-
-    const airH = Math.max(0, potatoY - GROUND_Y);
-    potatoEl.style.transform = 'rotate(' + (airH * 0.4) + 'deg)';
-    const s = Math.max(0.4, 1 - airH / 350);
-    shadowEl.style.transform = 'scale(' + s + ')';
-    shadowEl.style.opacity = String(Math.max(0.2, 1 - airH / 250));
-
-    const speed = Math.min(14, 5 + frame * 0.003) * dt;
-
-    spawnTimer += dt;
-    const interval = Math.max(50, 100 - frame * 0.03);
-    if (spawnTimer >= interval) {
-      spawnTimer = 0;
-      const r = Math.random();
-      if (r < 0.65) spawnObstacle();
-      else if (r < 0.9) spawnCoin();
-    }
-
-    // Хитбоксы картошки
-    const pL = POTATO_X + 10;
-    const pR = POTATO_X + POTATO_SIZE - 10;
-    const pB = potatoY + 5;
-    const pT = potatoY + POTATO_SIZE - 5;
-
-    // Враги
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-      const o = obstacles[i];
-      o.x -= speed;
-      o.el.style.left = o.x + 'px';
-
-      const oL = o.x + 8;
-      const oR = o.x + OBST_W - 8;
-      const oB = GROUND_Y + 5;
-      const oT = GROUND_Y + OBST_H - 8;
-
-      if (pR > oL && pL < oR && pT > oB && pB < oT) {
-        gameOver();
-        return;
-      }
-      if (o.x < -100) {
-        o.el.remove();
-        obstacles.splice(i, 1);
-      }
-    }
-
-    // Монеты
-    for (let i = coins.length - 1; i >= 0; i--) {
-      const c = coins[i];
-      c.x -= speed;
-      c.el.style.left = c.x + 'px';
-
-      const cL = c.x, cR = c.x + COIN_SIZE;
-      const cB = c.bottom, cT = c.bottom + COIN_SIZE;
-
-      if (pR > cL && pL < cR && pT > cB && pB < cT) {
-        c.el.remove();
-        coins.splice(i, 1);
-        score += 10;
-        scoreEl.textContent = score;
-        beep(900, 0.08, 'sine', 0.05);
-        continue;
-      }
-      if (c.x < -100) {
-        c.el.remove();
-        coins.splice(i, 1);
-      }
-    }
-
-    // Пассивный счёт
-    scoreTimer += dt;
-    if (scoreTimer >= 6) {
-      scoreTimer -= 6;
-      score++;
-      scoreEl.textContent = score;
-    }
-
-    rafId = requestAnimationFrame(loop);
+  // Облака дрейфуют
+  for (const c of clouds) {
+    c.position.x -= dt * 0.4;
+    if (c.position.x < -50) c.position.x = 50;
   }
 
-  // Управление
-  document.addEventListener('keydown', function (e) {
-    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
-      e.preventDefault();
-      if (state === 'menu' || state === 'gameover') startGame();
-      else if (state === 'playing') jump();
-    }
-  });
+  // Пульс солнца
+  sunGlow.scale.setScalar(1 + Math.sin(G.idleTime * 0.8) * 0.08);
 
-  gameEl.addEventListener('pointerdown', function (e) {
-    if (e.target.tagName === 'BUTTON') return;
-    if (state === 'playing') {
-      e.preventDefault();
-      jump();
-    }
-  });
-
-  playBtn.addEventListener('click', function (e) { e.stopPropagation(); startGame(); });
-  restartBtn.addEventListener('click', function (e) { e.stopPropagation(); startGame(); });
-
-  function fit() {
-    const s = Math.min(window.innerWidth / 820, window.innerHeight / 520, 1);
-    gameEl.style.transform = 'scale(' + s + ')';
+  // Dying
+  if (G.state === 'dying') {
+    G.dyingTimer += dt;
+    if (G.dyingTimer > 1.4) finishGameOver();
+    G.timeScale = Math.min(1, G.timeScale + dt * 0.5);
+    return;
   }
-  window.addEventListener('resize', fit);
-  fit();
 
-  potatoEl.style.bottom = GROUND_Y + 'px';
+  if (G.state !== 'playing') return;
+
+  G.frame += scaledDt;
+
+  // Физика прыжка
+  if (G.isJumping) {
+    G.potatoVY -= 30 * scaledDt;
+    G.potatoY += G.potatoVY * scaledDt;
+    if (G.potatoY <= 1.15) {
+      G.potatoY = 1.15;
+      G.potatoVY = 0;
+      G.isJumping = false;
+      G.jumpsLeft = 1;
+      G.squashX = 1.3;
+      G.squashY = 0.7;
+      spawnParticles(potato.position.x, 0.1, 0, 0xD2B48C, 8, 4);
+      beep(200, 0.08, 'square', 0.03);
+    }
+  }
+
+  // Squash easing
+  G.squashX += (1 - G.squashX) * dt * 12;
+  G.squashY += (1 - G.squashY) * dt * 12;
+
+  potato.position.set(0, G.potatoY, 0);
+  potato.scale.set(G.squashX, G.squashY, G.squashX);
+
+  // Вращение в прыжке
+  if (G.isJumping) {
+    G.rotZ += scaledDt * 5;
+  } else {
+    G.rotZ *= 0.92;
+    potato.rotation.y = Math.sin(G.frame * 3) * 0.08;
+  }
+  potato.rotation.z = G.rotZ;
+
+  // Тень под картошкой
+  const shScale = Math.max(0.3, 1 - (G.potatoY - 1.15) / 4);
+  potatoShadow.scale.setScalar(shScale);
+  potatoShadow.material.opacity = 0.35 * shScale;
+
+  // Скорость и интервал спавна
+  G.speed = Math.min(20, 8 + G.frame * 0.15);
+  G.spawnInterval = Math.max(0.9, 1.4 - G.frame * 0.008);
+
+  // Прокрутка земли
+  groundTexture.offset.x += scaledDt * G.speed * 0.08;
+
+  // Обновление препятствий
+  for (let i = G.obstacles.length - 1; i >= 0; i--) {
+    const o = G.obstacles[i];
+    o.position.x -= G.speed * scaledDt;
+    if (o.position.x < -22) { scene.remove(o); G.obstacles.splice(i, 1); }
+  }
+
+  // Обновление монет
+  for (let i = G.coins3d.length - 1; i >= 0; i--) {
+    const c = G.coins3d[i];
+    c.position.x -= G.speed * scaledDt;
+    c.rotation.z += scaledDt * 4;
+    c.position.y = c.userData.baseY + Math.sin(G.frame * 3 + c.userData.phase) * 0.2;
+    if (c.position.x < -22) { scene.remove(c); G.coins3d.splice(i, 1); }
+  }
+
+  // Спавн
+  G.spawnTimer += scaledDt;
+  if (G.spawnTimer >= G.spawnInterval) {
+    G.spawnTimer = 0;
+    if (Math.random() < 0.72) spawnObstacle();
+    else spawnCoin3d();
+  }
+
+  // Столкновение с препятствиями
+  for (const o of G.obstacles) {
+    if (Math.abs(o.position.x) < 1.0 && G.potatoY < 2.45) {
+      gameOver();
+      return;
+    }
+  }
+
+  // Сбор монет
+  for (let i = G.coins3d.length - 1; i >= 0; i--) {
+    const c = G.coins3d[i];
+    const dx = c.position.x - potato.position.x;
+    const dy = c.position.y - potato.position.y;
+    const dz = c.position.z - potato.position.z;
+    if (Math.sqrt(dx*dx + dy*dy + dz*dz) < 1.5) {
+      G.coins++;
+      G.score += 10;
+      spawnParticles(c.position.x, c.position.y, c.position.z, 0xFFD700, 10, 5);
+      beep(900 + G.coins * 20, 0.08, 'sine', 0.05, 1400);
+      scene.remove(c);
+      G.coins3d.splice(i, 1);
+    }
+  }
+
+  // Очки за время
+  G.score += scaledDt * 8;
+
+  // HUD
+  document.getElementById('score').textContent = Math.floor(G.score);
+  document.getElementById('coins').textContent = G.coins;
+
+  // Лёгкое покачивание камеры
+  camera.position.x = Math.sin(G.idleTime * 1.5) * 0.15;
+  camera.position.y = 5 + Math.sin(G.idleTime * 1.2) * 0.1;
+  camera.lookAt(0, 1.5, 0);
+}
+
+// ═══════════════════════ LOOP ═══════════════════════
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  update(dt);
+  renderer.render(scene, camera);
+}
+
+// ═══════════════════════ RESIZE ═══════════════════════
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ═══════════════════════ ВВОД ═══════════════════════
+let lastInput = 0;
+function handleInput() {
+  const now = performance.now();
+  if (now - lastInput < 60) return;
+  lastInput = now;
+  if (G.state === 'playing') jump();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+    e.preventDefault();
+    if (G.state === 'playing') jump();
+    else if (G.state === 'menu' || G.state === 'gameover') startGame();
+  }
+  if (e.code === 'Escape' && (G.state === 'playing' || G.state === 'dying')) {
+    goToMenu();
+  }
+});
+
+renderer.domElement.addEventListener('mousedown', handleInput);
+renderer.domElement.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  handleInput();
+}, { passive: false });
+
+document.getElementById('playBtn').addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
+document.getElementById('restartBtn').addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
+document.getElementById('menuBtn').addEventListener('click', (e) => { e.stopPropagation(); goToMenu(); });
+
+document.querySelectorAll('button').forEach(b => {
+  b.addEventListener('mousedown', e => e.stopPropagation());
+  b.addEventListener('touchstart', e => e.stopPropagation(), { passive: false });
+});
+
+// ═══════════════════════ СТАРТ ═══════════════════════
+animate();
+
 })();
 </script>
 </body>
